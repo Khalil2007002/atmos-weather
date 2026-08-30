@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#081a35" />
+    <meta
+      name="description"
+      content="Atmos, une expérience météo élégante et sans publicité."
+    />
+    <title>Atmos — Météo</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body data-weather="clear" data-phase="night">
+    <div class="app-shell">
+      <div class="ambient ambient--one" aria-hidden="true"></div>
+      <div class="ambient ambient--two" aria-hidden="true"></div>
+      <div class="grain" aria-hidden="true"></div>
+
+      <main class="dashboard" id="app">
+        <header class="topbar">
+          <a class="brand" href="./" aria-label="Atmos, accueil">
+            <span class="brand__mark" aria-hidden="true"><span></span></span>
+            <span>atmos</span>
+          </a>
+
+          <div class="topbar__actions">
+            <span class="availability"><i></i> Données en direct</span>
+            <button class="icon-button" id="refresh-button" type="button" aria-label="Actualiser la météo" title="Actualiser">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"/></svg>
+            </button>
+            <button class="theme-switch" id="theme-toggle" type="button" aria-label="Passer au mode clair" aria-pressed="true">
+              <span class="theme-switch__sun" aria-hidden="true">☀</span>
+              <span class="theme-switch__moon" aria-hidden="true">☾</span>
+              <span class="theme-switch__thumb" aria-hidden="true"></span>
+            </button>
+          </div>
+        </header>
+
+        <section class="location-tools" aria-label="Changer de ville">
+          <form class="search-area" id="location-search-form" role="search" novalidate>
+            <div class="search-field" id="search-area">
+              <svg class="search-field__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="5.9"/><path d="m16 16 4.1 4.1"/></svg>
+              <input id="location-search" type="search" autocomplete="off" spellcheck="false" placeholder="Rechercher une ville ou un pays" aria-label="Rechercher une ville ou un pays" aria-autocomplete="list" aria-controls="search-suggestions" />
+              <button class="search-field__submit" type="submit" aria-label="Lancer la recherche">↵</button>
+              <div class="search-suggestions" id="search-suggestions" role="listbox" aria-label="Suggestions de villes" hidden></div>
+            </div>
+          </form>
+          <button class="location-button" id="geolocate-button" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3Z"/></svg>
+            <span>Utiliser ma position</span>
+          </button>
+        </section>
+
+        <p class="location-status" id="location-status" role="status" aria-live="polite" hidden></p>
+
+        <section class="favorites-panel glass-card" aria-labelledby="favorites-title">
+          <div class="favorites-panel__label">
+            <span class="favorites-panel__star" aria-hidden="true">★</span>
+            <h2 id="favorites-title">Mes lieux</h2>
+          </div>
+          <p class="favorites-empty" id="favorites-empty">Enregistrez une ville pour la retrouver ici.</p>
+          <div class="favorites-list" id="favorites-list" aria-live="polite"></div>
+        </section>
+
+        <section class="weather-stage" aria-labelledby="weather-title">
+          <article class="hero-card glass-card">
+            <div class="hero-card__topline">
+              <div class="location">
+                <span class="location__pin" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M20 10c0 5.5-8 11-8 11S4 15.5 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                </span>
+                <div>
+                  <p class="eyebrow">Météo actuelle</p>
+                  <h1 id="weather-title">Rabat <span>· Maroc</span></h1>
+                </div>
+              </div>
+              <div class="hero-card__actions">
+                <button class="favorite-toggle" id="favorite-toggle" type="button" aria-label="Ajouter cette ville aux favoris" aria-pressed="false">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3.8 2.5 5.1 5.6.8-4.1 4 .9 5.6-4.9-2.6-5 2.6.9-5.6-4.1-4 5.7-.8L12 3.8Z"/></svg>
+                  <span>Enregistrer</span>
+                </button>
+                <span class="local-time" id="local-time">—</span>
+              </div>
+            </div>
+
+            <div class="weather-content" id="weather-content" aria-live="polite" aria-busy="true">
+              <div class="weather-loading">
+                <div class="skeleton skeleton--icon"></div>
+                <div class="skeleton-stack">
+                  <div class="skeleton skeleton--temperature"></div>
+                  <div class="skeleton skeleton--condition"></div>
+                  <div class="skeleton skeleton--details"></div>
+                </div>
+              </div>
+            </div>
+
+            <footer class="hero-card__footer">
+              <span class="updated" id="last-updated">Chargement des observations…</span>
+              <span class="source-note">Propulsé par <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open‑Meteo</a></span>
+            </footer>
+          </article>
+
+          <aside class="atmosphere-card glass-card" aria-label="Aperçu de l'atmosphère">
+            <div class="atmosphere-card__header">
+              <p class="eyebrow">Ciel en ce moment</p>
+              <span class="pulse" aria-hidden="true"></span>
+            </div>
+            <div class="sky-illustration" id="sky-illustration" data-kind="clear" aria-hidden="true">
+              <div class="sky-illustration__halo"></div>
+              <div class="sky-illustration__sun"></div>
+              <div class="sky-illustration__cloud sky-illustration__cloud--one"></div>
+              <div class="sky-illustration__cloud sky-illustration__cloud--two"></div>
+              <div class="sky-illustration__stars"><i></i><i></i><i></i></div>
+              <div class="sky-illustration__rain"><i></i><i></i><i></i><i></i></div>
+            </div>
+            <div class="atmosphere-card__footer">
+              <span id="atmosphere-copy">Lecture des conditions…</span>
+              <span class="compass" aria-hidden="true">⌁</span>
+            </div>
+          </aside>
+        </section>
+
+        <section class="phase-note glass-card" aria-label="État du produit">
+          <span class="phase-note__dot" aria-hidden="true"></span>
+          <p><strong>Phase 2</strong><span>—</span> recherche, position et lieux enregistrés.</p>
+        </section>
+
+        <p class="geo-attribution">Recherche par <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open‑Meteo</a> · Localisation © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a></p>
+      </main>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

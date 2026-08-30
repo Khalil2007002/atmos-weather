@@ -1,0 +1,12 @@
+{
+  "name": "atmos-weather",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "build": "node build.mjs",
+    "preview": "node server.mjs --dist",
+    "check": "node --check src/main.js && node --check src/services/weather-api.js"
+  }
+}
