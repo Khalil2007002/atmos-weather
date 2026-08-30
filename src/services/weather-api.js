@@ -2,10 +2,17 @@ const FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
 const REQUEST_TIMEOUT_MS = 12_000;
 
 const WEATHER_PARAMETERS = {
-  current: 'temperature_2m,apparent_temperature,weather_code,is_day',
-  daily: 'temperature_2m_max,temperature_2m_min',
+  current:
+    'temperature_2m,apparent_temperature,weather_code,is_day',
+
+  hourly:
+    'temperature_2m,weather_code,precipitation_probability',
+
+  daily:
+    'temperature_2m_max,temperature_2m_min',
+
   timezone: 'auto',
-  forecast_days: '1',
+  forecast_days: '2',
 };
 
 /**
@@ -34,6 +41,7 @@ export async function getCurrentWeather(location, { signal } = {}) {
 
 function createOpenMeteoUrl(location) {
   const url = new URL(FORECAST_ENDPOINT);
+
   url.search = new URLSearchParams({
     latitude: String(location.latitude),
     longitude: String(location.longitude),
@@ -45,6 +53,7 @@ function createOpenMeteoUrl(location) {
 
 function createLocalProxyUrl(location) {
   const url = new URL('/api/weather', window.location.origin);
+
   url.search = new URLSearchParams({
     latitude: String(location.latitude),
     longitude: String(location.longitude),
@@ -56,48 +65,78 @@ function createLocalProxyUrl(location) {
 function shouldUseLocalProxy() {
   if (typeof window === 'undefined') return false;
 
-  return ['127.0.0.1', 'localhost', '::1'].includes(window.location.hostname);
+  return ['127.0.0.1', 'localhost', '::1'].includes(
+    window.location.hostname,
+  );
 }
 
 async function fetchWeatherData(url, { signal } = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  const timeout = setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS,
+  );
+
   const abortFromCaller = () => controller.abort();
 
   if (signal) {
-    if (signal.aborted) abortFromCaller();
-    else signal.addEventListener('abort', abortFromCaller, { once: true });
+    if (signal.aborted) {
+      abortFromCaller();
+    } else {
+      signal.addEventListener('abort', abortFromCaller, {
+        once: true,
+      });
+    }
   }
 
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       cache: 'no-store',
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json',
+      },
     });
 
     if (!response.ok) {
-      throw new Error(`Weather request failed (${response.status})`);
+      throw new Error(
+        `Weather request failed (${response.status})`,
+      );
     }
 
     return await response.json();
   } catch (error) {
-    if (!signal?.aborted && controller.signal.aborted) {
+    if (
+      !signal?.aborted &&
+      controller.signal.aborted
+    ) {
       throw new Error('Weather request timed out');
     }
 
     throw error;
   } finally {
     clearTimeout(timeout);
-    signal?.removeEventListener('abort', abortFromCaller);
+
+    signal?.removeEventListener(
+      'abort',
+      abortFromCaller,
+    );
   }
 }
 
 function normalizeWeather(data, location) {
   const current = data.current;
+  const hourly = data.hourly;
   const daily = data.daily;
 
-  if (!current || !daily?.temperature_2m_max?.length || !daily?.temperature_2m_min?.length) {
+  if (
+    !current ||
+    !hourly?.time?.length ||
+    !hourly?.temperature_2m?.length ||
+    !daily?.temperature_2m_max?.length ||
+    !daily?.temperature_2m_min?.length
+  ) {
     throw new Error('Weather response is incomplete');
   }
 
@@ -107,12 +146,23 @@ function normalizeWeather(data, location) {
       country: location.country,
       timezone: data.timezone || 'UTC',
     },
+
     temperature: current.temperature_2m,
     apparentTemperature: current.apparent_temperature,
     weatherCode: current.weather_code,
     isDay: Boolean(current.is_day),
+
     minTemperature: daily.temperature_2m_min[0],
     maxTemperature: daily.temperature_2m_max[0],
+
     observedAt: current.time,
+
+    hourly: {
+      time: hourly.time,
+      temperature: hourly.temperature_2m,
+      weatherCode: hourly.weather_code,
+      precipitationProbability:
+        hourly.precipitation_probability || [],
+    },
   };
 }
