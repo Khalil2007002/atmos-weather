@@ -166,6 +166,8 @@
           aria-labelledby="weather-title"
         >
 
+          <div class="weather-main-column">
+
           <article class="hero-card glass-card">
 
             <div class="hero-card__topline">
@@ -279,6 +281,58 @@
 
           </article>
 
+          <!-- =====================================================
+               PHASE 3 — PRÉVISIONS 24 HEURES
+               ===================================================== -->
+
+          <section
+            class="hourly-card glass-card"
+            aria-labelledby="hourly-title"
+          >
+
+            <div class="hourly-card__header">
+
+              <div>
+                <p class="eyebrow">
+                    Prévisions horaires
+                </p>
+
+                <h2 id="hourly-title">
+                    Prochaines 24 heures
+                </h2>
+              </div>
+
+              <span class="hourly-card__badge">
+                24 h
+              </span>
+
+            </div>
+
+
+            <div class="hourly-scroll" id="hourly-scroll">
+              <div class="hourly-scroll__content">
+
+                <div
+                  class="hourly-forecast"
+                  id="hourly-forecast"
+                  aria-live="polite"
+                ></div>
+
+                <div
+                  class="hourly-chart"
+                  id="hourly-chart"
+                  aria-label="Évolution de la température sur les prochaines 24 heures"
+                ></div>
+
+              </div>
+            </div>
+
+          </section>
+
+          </div>
+
+
+          <div class="weather-side">
 
           <aside
             class="atmosphere-card glass-card"
@@ -350,49 +404,42 @@
 
           </aside>
 
-        </section>
+          <!-- =====================================================
+               PHASE 3 — PRÉVISIONS 16 JOURS
+               ===================================================== -->
 
+          <section
+            class="daily-card glass-card"
+            aria-labelledby="daily-title"
+          >
 
-        <!-- =====================================================
-             PHASE 3 — PRÉVISIONS 24 HEURES
-             ===================================================== -->
+            <div class="daily-card__header">
 
-        <section
-          class="hourly-card glass-card"
-          aria-labelledby="hourly-title"
-        >
+              <div>
+                <p class="eyebrow">
+                    Prévisions
+                </p>
 
-          <div class="hourly-card__header">
+                <h2 id="daily-title">
+                    Sur 16 jours
+                </h2>
+              </div>
 
-            <div>
-              <p class="eyebrow">
-                Prévisions horaires
-              </p>
+              <span class="daily-card__badge">
+                16 J
+              </span>
 
-              <h2 id="hourly-title">
-                Prochaines 24 heures
-              </h2>
             </div>
 
-            <span class="hourly-card__badge">
-              24 h
-            </span>
+            <div
+              class="daily-forecast"
+              id="daily-forecast"
+              aria-live="polite"
+            ></div>
+
+          </section>
 
           </div>
-
-
-          <div
-            class="hourly-forecast"
-            id="hourly-forecast"
-            aria-live="polite"
-          ></div>
-
-
-          <div
-            class="hourly-chart"
-            id="hourly-chart"
-            aria-label="Évolution de la température sur les prochaines 24 heures"
-          ></div>
 
         </section>
 

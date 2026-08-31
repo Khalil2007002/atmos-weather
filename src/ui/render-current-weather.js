@@ -5,95 +5,196 @@ import {
   formatUpdateTime,
   titleCase,
 } from '../utils/formatters.js';
+
 import { describeWeather } from '../utils/weather-code.js';
 
 export function renderCurrentWeather(weather) {
-  const condition = describeWeather(weather.weatherCode, weather.isDay);
-  const city = document.querySelector('#weather-title');
-  const localTime = document.querySelector('#local-time');
-  const content = document.querySelector('#weather-content');
-  const updated = document.querySelector('#last-updated');
-  const skyIllustration = document.querySelector('#sky-illustration');
-  const atmosphereCopy = document.querySelector('#atmosphere-copy');
+  const condition = describeWeather(
+    weather.weatherCode,
+    weather.isDay,
+  );
 
-  city.innerHTML = `${weather.location.name} <span>· ${weather.location.country}</span>`;
-  localTime.textContent = formatLocalTime(weather.location.timezone);
-  localTime.setAttribute('aria-label', `Heure locale : ${localTime.textContent}`);
+  const city =
+    document.querySelector('#weather-title');
 
-  document.body.dataset.weather = condition.kind;
-  document.body.dataset.phase = condition.isNight ? 'night' : 'day';
-  skyIllustration.dataset.kind = condition.kind;
-  skyIllustration.dataset.phase = condition.isNight ? 'night' : 'day';
-  atmosphereCopy.textContent = condition.isNight
-    ? 'Ambiance nocturne'
-    : 'Lumière du jour';
+  const localTime =
+    document.querySelector('#local-time');
 
-  content.setAttribute('aria-busy', 'false');
+  const content =
+    document.querySelector('#weather-content');
+
+  const updated =
+    document.querySelector('#last-updated');
+
+  const skyIllustration =
+    document.querySelector('#sky-illustration');
+
+  const atmosphereCopy =
+    document.querySelector('#atmosphere-copy');
+
+  city.innerHTML = `
+    ${escapeHtml(weather.location.name)}
+    <span>· ${escapeHtml(weather.location.country)}</span>
+  `;
+
+  localTime.textContent =
+    formatLocalTime(
+      weather.location.timezone,
+    );
+
+  localTime.setAttribute(
+    'aria-label',
+    `Heure locale : ${localTime.textContent}`,
+  );
+
+  document.body.dataset.weather =
+    condition.kind;
+
+  document.body.dataset.phase =
+    condition.isNight
+      ? 'night'
+      : 'day';
+
+  skyIllustration.dataset.kind =
+    condition.kind;
+
+  skyIllustration.dataset.phase =
+    condition.isNight
+      ? 'night'
+      : 'day';
+
+  atmosphereCopy.textContent =
+    condition.isNight
+      ? 'Ambiance nocturne'
+      : 'Lumière du jour';
+
+  content.setAttribute(
+    'aria-busy',
+    'false',
+  );
 
   content.innerHTML = `
     <div class="weather-summary weather-summary--enter">
-      <div class="weather-icon weather-icon--${condition.kind}" aria-hidden="true">
+
+      <div
+        class="weather-icon weather-icon--${condition.kind}"
+        aria-hidden="true"
+      >
         ${condition.icon}
       </div>
 
       <div class="weather-reading">
+
         <p class="date-label">
-          ${titleCase(formatLocalDate(weather.location.timezone))}
+          ${titleCase(
+            formatLocalDate(
+              weather.location.timezone,
+            ),
+          )}
         </p>
 
         <div class="temperature">
-          ${formatTemperature(weather.temperature)}
+          ${formatTemperature(
+            weather.temperature,
+          )}
         </div>
 
         <p class="condition">
-          ${condition.label}
+          ${escapeHtml(
+            condition.label,
+          )}
         </p>
 
         <p class="feels-like">
           Ressenti
-          <strong>${formatTemperature(weather.apparentTemperature)}</strong>
+          <strong>
+            ${formatTemperature(
+              weather.apparentTemperature,
+            )}
+          </strong>
         </p>
+
       </div>
+
     </div>
 
-    <div class="temperature-range" aria-label="Températures du jour">
+    <div
+      class="temperature-range"
+      aria-label="Températures du jour"
+    >
+
       <span>
         <small>Min.</small>
-        <strong>${formatTemperature(weather.minTemperature)}</strong>
+
+        <strong>
+          ${formatTemperature(
+            weather.minTemperature,
+          )}
+        </strong>
       </span>
 
       <i aria-hidden="true"></i>
 
       <span>
         <small>Max.</small>
-        <strong>${formatTemperature(weather.maxTemperature)}</strong>
+
+        <strong>
+          ${formatTemperature(
+            weather.maxTemperature,
+          )}
+        </strong>
       </span>
+
     </div>
   `;
 
   renderHourlyForecast(weather);
+  renderDailyForecast(weather);
+
+  const chart =
+    document.querySelector(
+      '#hourly-chart',
+    );
+
+  if (chart) {
+    chart.innerHTML = '';
+    chart.style.display = 'none';
+  }
 
   updated.textContent =
-    `Mis à jour à ${formatUpdateTime(weather.location.timezone)} · ${weather.location.timezone.replaceAll('_', ' ')}`;
+    `Mis à jour à ${
+      formatUpdateTime(
+        weather.location.timezone,
+      )
+    } · ${
+      weather.location.timezone
+        .replaceAll(
+          '_',
+          ' ',
+        )
+    }`;
 }
 
 
 /* =========================================================
    PRÉVISIONS 24 HEURES
+   CARTES COLORÉES SELON LA TEMPÉRATURE
    ========================================================= */
 
 function renderHourlyForecast(weather) {
-  const container = document.querySelector('#hourly-forecast');
-  const chart = document.querySelector('#hourly-chart');
+  const container =
+    document.querySelector(
+      '#hourly-forecast',
+    );
 
   if (!container) return;
 
-  const hourly = weather.hourly;
-
   if (
-    !hourly ||
-    !Array.isArray(hourly.time) ||
-    !hourly.time.length
+    !weather.hourly ||
+    !Array.isArray(
+      weather.hourly.time,
+    ) ||
+    !weather.hourly.time.length
   ) {
     container.innerHTML = `
       <p class="forecast-placeholder">
@@ -101,162 +202,317 @@ function renderHourlyForecast(weather) {
       </p>
     `;
 
-    if (chart) {
-      chart.innerHTML = '';
-    }
+    return;
+  }
+
+  const startIndex =
+    findCurrentHourIndex(
+      weather.hourly.time,
+      weather.observedAt,
+    );
+
+  const times =
+    weather.hourly.time.slice(
+      startIndex,
+      startIndex + 24,
+    );
+
+  const temperatures =
+    weather.hourly.temperature.slice(
+      startIndex,
+      startIndex + 24,
+    );
+
+  const weatherCodes =
+    weather.hourly.weatherCode.slice(
+      startIndex,
+      startIndex + 24,
+    );
+
+  const precipitationProbability =
+    weather.hourly.precipitationProbability.slice(
+      startIndex,
+      startIndex + 24,
+    );
+
+  if (!times.length) {
+    container.innerHTML = `
+      <p class="forecast-placeholder">
+        Prévisions horaires indisponibles.
+      </p>
+    `;
 
     return;
   }
 
-  const startIndex = findCurrentHourIndex(
-    hourly.time,
-    weather.observedAt,
-  );
-
-  const times = hourly.time.slice(
-    startIndex,
-    startIndex + 24,
-  );
-
-  const temperatures = hourly.temperature.slice(
-    startIndex,
-    startIndex + 24,
-  );
-
-  const codes = hourly.weatherCode.slice(
-    startIndex,
-    startIndex + 24,
-  );
-
-  const rain = hourly.precipitationProbability.slice(
-    startIndex,
-    startIndex + 24,
-  );
-
-  container.innerHTML = times
-    .map((time, index) => {
-      const hourlyCondition = describeWeather(
-        codes[index],
-        isHourDay(time),
+  const numericTemperatures =
+    temperatures
+      .map(
+        value => Number(value),
+      )
+      .filter(
+        Number.isFinite,
       );
 
-      return `
-        <article class="hourly-item">
-          <span class="hourly-item__time">
-            ${formatHour(time)}
-          </span>
+  const minTemperature =
+    Math.min(
+      ...numericTemperatures,
+    );
 
-          <span class="hourly-item__icon" aria-hidden="true">
-            ${hourlyCondition.icon}
-          </span>
+  const maxTemperature =
+    Math.max(
+      ...numericTemperatures,
+    );
 
-          <strong class="hourly-item__temperature">
-            ${formatTemperature(temperatures[index])}
-          </strong>
+  container.innerHTML =
+    times
+      .map(
+        (time, index) => {
 
-          <span class="hourly-item__rain">
-            💧 ${formatNumber(rain[index])}%
-          </span>
-        </article>
-      `;
-    })
-    .join('');
+          const temperature =
+            Number(
+              temperatures[index],
+            );
 
-  renderHourlyChart(times, temperatures);
+          const code =
+            weatherCodes[index];
+
+          const probability =
+            precipitationProbability[index];
+
+          const condition =
+            describeWeather(
+              code,
+              isHourDay(time),
+            );
+
+          const temperatureClass =
+            getTemperatureClass(
+              temperature,
+              minTemperature,
+              maxTemperature,
+            );
+
+          return `
+            <article
+              class="hourly-item ${temperatureClass}"
+              data-temperature="${temperature}"
+            >
+
+              <span
+                class="hourly-item__time"
+              >
+                ${formatHour(time)}
+              </span>
+
+              <span
+                class="hourly-item__icon"
+                aria-hidden="true"
+              >
+                ${condition.icon}
+              </span>
+
+              <strong
+                class="hourly-item__temperature"
+              >
+                ${formatTemperature(
+                  temperature,
+                )}
+              </strong>
+
+              <span
+                class="hourly-item__rain"
+              >
+                ${formatNumber(
+                  probability,
+                )}%
+              </span>
+
+            </article>
+          `;
+        },
+      )
+      .join('');
 }
 
 
 /* =========================================================
-   COURBE DE TEMPÉRATURE
+   CLASSE THERMIQUE
    ========================================================= */
 
-function renderHourlyChart(times, temperatures) {
-  const container = document.querySelector('#hourly-chart');
+function getTemperatureClass(
+  temperature,
+  minTemperature,
+  maxTemperature,
+) {
+  const range =
+    Math.max(
+      maxTemperature -
+        minTemperature,
+      1,
+    );
 
-  if (!container || !temperatures.length) return;
+  const ratio =
+    (
+      temperature -
+      minTemperature
+    ) / range;
 
-  const values = temperatures
-    .map(Number)
-    .filter(Number.isFinite);
+  if (ratio <= 0.20) {
+    return 'temperature-cold';
+  }
 
-  if (!values.length) return;
+  if (ratio <= 0.40) {
+    return 'temperature-cool';
+  }
 
-  const width = 1000;
-  const height = 190;
-  const paddingX = 25;
-  const paddingY = 25;
+  if (ratio <= 0.60) {
+    return 'temperature-neutral';
+  }
 
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = Math.max(max - min, 1);
+  if (ratio <= 0.80) {
+    return 'temperature-warm';
+  }
 
-  const usableWidth = width - paddingX * 2;
-  const usableHeight = height - paddingY * 2;
+  return 'temperature-hot';
+}
 
-  const points = values.map((temperature, index) => {
-    const x =
-      paddingX +
-      (index / Math.max(values.length - 1, 1)) *
-        usableWidth;
 
-    const y =
-      paddingY +
-      (1 - (temperature - min) / range) *
-        usableHeight;
+/* =========================================================
+   PRÉVISIONS 16 JOURS
+   ========================================================= */
 
-    return { x, y, temperature };
-  });
+function renderDailyForecast(weather) {
+  const container =
+    document.querySelector(
+      '#daily-forecast',
+    );
 
-  const line = points
-    .map(
-      (point, index) =>
-        `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`
-    )
-    .join(' ');
+  if (!container) return;
 
-  const area = [
-    `M ${points[0].x} ${height - paddingY}`,
-    ...points.map(
-      point => `L ${point.x} ${point.y}`,
-    ),
-    `L ${points[points.length - 1].x} ${height - paddingY}`,
-    'Z',
-  ].join(' ');
+  if (
+    !weather.daily ||
+    !Array.isArray(
+      weather.daily.time,
+    ) ||
+    !weather.daily.time.length
+  ) {
+    container.innerHTML = `
+      <p class="forecast-placeholder">
+        Prévisions sur 16 jours indisponibles.
+      </p>
+    `;
 
-  const dots = points
-    .map(
-      point => `
-        <circle
-          class="hourly-chart__dot"
-          cx="${point.x}"
-          cy="${point.y}"
-          r="4"
-        />
-      `,
-    )
-    .join('');
+    return;
+  }
 
-  container.innerHTML = `
-    <svg
-      class="hourly-chart__svg"
-      viewBox="0 0 ${width} ${height}"
-      preserveAspectRatio="none"
-      role="img"
-      aria-label="Évolution de la température sur les prochaines 24 heures"
-    >
-      <path
-        class="hourly-chart__area"
-        d="${area}"
-      />
+  const totalDays =
+    Math.min(
+      16,
+      weather.daily.time.length,
+    );
 
-      <path
-        class="hourly-chart__line"
-        d="${line}"
-      />
+  container.innerHTML =
+    Array.from(
+      {
+        length: totalDays,
+      },
+      (_, index) => {
 
-      ${dots}
-    </svg>
-  `;
+        const date =
+          weather.daily.time[index];
+
+        const maxTemperature =
+          weather.daily
+            .temperatureMax[index];
+
+        const minTemperature =
+          weather.daily
+            .temperatureMin[index];
+
+        const weatherCode =
+          weather.daily
+            .weatherCode[index];
+
+        const rainProbability =
+          weather.daily
+            .precipitationProbability?.[
+              index
+            ] ?? 0;
+
+        const dayCondition =
+          describeWeather(
+            weatherCode,
+            true,
+          );
+
+        const isToday =
+          index === 0;
+
+        return `
+          <article
+            class="daily-item${
+              isToday
+                ? ' is-today'
+                : ''
+            }"
+          >
+
+            <div
+              class="daily-item__day"
+            >
+
+              <strong>
+                ${
+                  isToday
+                    ? "Aujourd'hui"
+                    : formatDailyDay(
+                        date,
+                      )
+                }
+              </strong>
+
+              <small>
+                ${formatDailyDate(date)}
+              </small>
+
+            </div>
+
+            <span
+              class="daily-item__icon"
+              aria-hidden="true"
+            >
+              ${dayCondition.icon}
+            </span>
+
+            <span
+              class="daily-item__min"
+            >
+              ${formatTemperature(
+                minTemperature,
+              )}
+            </span>
+
+            <span
+              class="daily-item__max"
+            >
+              ${formatTemperature(
+                maxTemperature,
+              )}
+            </span>
+
+            <span
+              class="daily-item__rain"
+            >
+              ${formatNumber(
+                rainProbability,
+              )}%
+            </span>
+
+          </article>
+        `;
+      },
+    ).join('');
 }
 
 
@@ -264,72 +520,206 @@ function renderHourlyChart(times, temperatures) {
    UTILITAIRES
    ========================================================= */
 
-function findCurrentHourIndex(times, observedAt) {
-  if (!observedAt) return 0;
+function findCurrentHourIndex(
+  times,
+  observedAt,
+) {
+  if (!observedAt) {
+    return 0;
+  }
 
-  const exactIndex = times.indexOf(observedAt);
+  const exactIndex =
+    times.indexOf(
+      observedAt,
+    );
 
   if (exactIndex >= 0) {
     return exactIndex;
   }
 
-  const observedTimestamp = Date.parse(observedAt);
+  const observedTimestamp =
+    Date.parse(
+      observedAt,
+    );
 
-  if (!Number.isFinite(observedTimestamp)) {
+  if (
+    !Number.isFinite(
+      observedTimestamp,
+    )
+  ) {
     return 0;
   }
 
   let closestIndex = 0;
-  let smallestDifference = Infinity;
+  let smallestDifference =
+    Infinity;
 
-  times.forEach((time, index) => {
-    const timestamp = Date.parse(time);
+  times.forEach(
+    (time, index) => {
 
-    if (!Number.isFinite(timestamp)) return;
+      const timestamp =
+        Date.parse(time);
 
-    const difference = Math.abs(
-      timestamp - observedTimestamp,
-    );
+      if (
+        !Number.isFinite(
+          timestamp,
+        )
+      ) {
+        return;
+      }
 
-    if (difference < smallestDifference) {
-      smallestDifference = difference;
-      closestIndex = index;
-    }
-  });
+      const difference =
+        Math.abs(
+          timestamp -
+          observedTimestamp,
+        );
+
+      if (
+        difference <
+        smallestDifference
+      ) {
+        smallestDifference =
+          difference;
+
+        closestIndex =
+          index;
+      }
+    },
+  );
 
   return closestIndex;
 }
 
-function formatHour(value) {
-  const match = String(value).match(
-    /T(\d{2}):/,
-  );
+function formatHour(
+  dateTime,
+) {
+  const match =
+    String(
+      dateTime,
+    ).match(
+      /T(\d{2}):(\d{2})/,
+    );
 
-  return match ? `${match[1]}h` : '—';
+  if (!match) {
+    return '—';
+  }
+
+  return `${match[1]}h`;
 }
 
-function isHourDay(value) {
-  const match = String(value).match(
-    /T(\d{2}):/,
-  );
+function formatDailyDay(
+  value,
+) {
+  const match =
+    String(
+      value,
+    ).match(
+      /(\d{4})-(\d{2})-(\d{2})/,
+    );
 
-  if (!match) return true;
+  if (!match) {
+    return '—';
+  }
 
-  const hour = Number(match[1]);
+  const date =
+    new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+    );
+
+  return new Intl.DateTimeFormat(
+    'fr-FR',
+    {
+      weekday: 'long',
+    },
+  ).format(date);
+}
+
+function formatDailyDate(
+  value,
+) {
+  const match =
+    String(
+      value,
+    ).match(
+      /(\d{4})-(\d{2})-(\d{2})/,
+    );
+
+  if (!match) {
+    return '—';
+  }
+
+  return `${match[3]}/${match[2]}`;
+}
+
+function isHourDay(
+  dateTime,
+) {
+  const match =
+    String(
+      dateTime,
+    ).match(
+      /T(\d{2}):/,
+    );
+
+  if (!match) {
+    return true;
+  }
+
+  const hour =
+    Number(match[1]);
 
   return hour >= 7 && hour < 20;
 }
 
-function formatNumber(value) {
-  const number = Number(value);
+function formatNumber(
+  value,
+) {
+  const number =
+    Number(value);
 
-  if (!Number.isFinite(number)) {
+  if (
+    !Number.isFinite(
+      number,
+    )
+  ) {
     return '—';
   }
 
-  return Number.isInteger(number)
+  return Number.isInteger(
+    number,
+  )
     ? String(number)
     : number.toFixed(1);
+}
+
+function escapeHtml(
+  value,
+) {
+  return String(
+    value ?? '',
+  )
+    .replaceAll(
+      '&',
+      '&amp;',
+    )
+    .replaceAll(
+      '<',
+      '&lt;',
+    )
+    .replaceAll(
+      '>',
+      '&gt;',
+    )
+    .replaceAll(
+      '"',
+      '&quot;',
+    )
+    .replaceAll(
+      "'",
+      '&#039;',
+    );
 }
 
 
@@ -337,21 +727,39 @@ function formatNumber(value) {
    ERREUR
    ========================================================= */
 
-export function renderWeatherError({ onRetry }) {
-  const content = document.querySelector('#weather-content');
-  const updated = document.querySelector('#last-updated');
+export function renderWeatherError({
+  onRetry,
+}) {
+  const content =
+    document.querySelector(
+      '#weather-content',
+    );
 
-  content.setAttribute('aria-busy', 'false');
+  const updated =
+    document.querySelector(
+      '#last-updated',
+    );
+
+  content.setAttribute(
+    'aria-busy',
+    'false',
+  );
 
   content.innerHTML = `
     <div class="weather-error">
-      <span class="weather-error__icon" aria-hidden="true">
+
+      <span
+        class="weather-error__icon"
+        aria-hidden="true"
+      >
         ⚠️
       </span>
 
       <div>
+
         <p>
-          Impossible de récupérer les données météo.
+          Impossible de récupérer
+          les données météo.
         </p>
 
         <button
@@ -360,7 +768,9 @@ export function renderWeatherError({ onRetry }) {
         >
           Réessayer
         </button>
+
       </div>
+
     </div>
   `;
 
@@ -368,7 +778,9 @@ export function renderWeatherError({ onRetry }) {
     'La dernière tentative a échoué.';
 
   content
-    .querySelector('.retry-button')
+    .querySelector(
+      '.retry-button',
+    )
     .addEventListener(
       'click',
       onRetry,
@@ -381,20 +793,46 @@ export function renderWeatherError({ onRetry }) {
    ========================================================= */
 
 export function renderWeatherLoading() {
-  const content = document.querySelector('#weather-content');
-  const updated = document.querySelector('#last-updated');
+  const content =
+    document.querySelector(
+      '#weather-content',
+    );
 
-  content.setAttribute('aria-busy', 'true');
+  const updated =
+    document.querySelector(
+      '#last-updated',
+    );
+
+  content.setAttribute(
+    'aria-busy',
+    'true',
+  );
 
   content.innerHTML = `
     <div class="weather-loading">
-      <div class="skeleton skeleton--icon"></div>
 
-      <div class="skeleton-stack">
-        <div class="skeleton skeleton--temperature"></div>
-        <div class="skeleton skeleton--condition"></div>
-        <div class="skeleton skeleton--details"></div>
+      <div
+        class="skeleton skeleton--icon"
+      ></div>
+
+      <div
+        class="skeleton-stack"
+      >
+
+        <div
+          class="skeleton skeleton--temperature"
+        ></div>
+
+        <div
+          class="skeleton skeleton--condition"
+        ></div>
+
+        <div
+          class="skeleton skeleton--details"
+        ></div>
+
       </div>
+
     </div>
   `;
 

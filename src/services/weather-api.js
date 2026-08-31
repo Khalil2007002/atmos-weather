@@ -9,10 +9,10 @@ const WEATHER_PARAMETERS = {
     'temperature_2m,weather_code,precipitation_probability',
 
   daily:
-    'temperature_2m_max,temperature_2m_min',
+    'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
 
   timezone: 'auto',
-  forecast_days: '2',
+  forecast_days: '16',
 };
 
 /**
@@ -134,6 +134,8 @@ function normalizeWeather(data, location) {
     !current ||
     !hourly?.time?.length ||
     !hourly?.temperature_2m?.length ||
+    !daily?.time?.length ||
+    !daily?.weather_code?.length ||
     !daily?.temperature_2m_max?.length ||
     !daily?.temperature_2m_min?.length
   ) {
@@ -163,6 +165,15 @@ function normalizeWeather(data, location) {
       weatherCode: hourly.weather_code,
       precipitationProbability:
         hourly.precipitation_probability || [],
+    },
+
+    daily: {
+      time: daily.time,
+      weatherCode: daily.weather_code,
+      temperatureMax: daily.temperature_2m_max,
+      temperatureMin: daily.temperature_2m_min,
+      precipitationProbability:
+        daily.precipitation_probability_max || [],
     },
   };
 }

@@ -2011,3 +2011,495 @@ h1 span {
     height: 110px;
   }
 }
+
+/* =========================================================
+   PHASE 3 — ÉQUILIBRAGE 24 H / 16 JOURS
+   Ajout uniquement pour les proportions de la nouvelle mise en page
+   ========================================================= */
+
+/* La colonne de droite contient maintenant Ciel + 16 jours */
+.weather-side {
+  display: grid;
+  grid-template-rows: 285px minmax(0, 1fr);
+  gap: 18px;
+  min-width: 0;
+}
+
+/* Ciel du moment : compact pour laisser respirer les 16 jours */
+.weather-side .atmosphere-card {
+  min-height: 0;
+  height: 285px;
+  padding: 22px;
+  border-radius: 28px;
+}
+
+.weather-side .sky-illustration {
+  min-height: 0;
+  height: 155px;
+  margin: 14px -5px 10px;
+}
+
+/* Prévisions 16 jours : prend tout l'espace restant */
+.daily-card {
+  min-height: 0;
+  height: 100%;
+  padding: 22px;
+  border-radius: 28px;
+  overflow: hidden;
+}
+
+.daily-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.daily-card__header h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.04em;
+}
+
+.daily-card__badge {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 10px;
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+  font: 700 10px/1 var(--font-mono);
+}
+
+.daily-forecast {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100% - 52px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 3px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.daily-forecast::-webkit-scrollbar {
+  display: none;
+}
+
+.daily-item {
+  display: grid;
+  grid-template-columns: minmax(78px, 1fr) 34px 46px 46px 38px;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 50px;
+  padding: 8px 2px;
+  border-bottom: 1px solid rgba(255,255,255,.09);
+}
+
+.daily-item:last-child {
+  border-bottom: 0;
+}
+
+.daily-item__day {
+  min-width: 0;
+}
+
+.daily-item__day strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-item__day small {
+  display: block;
+  margin-top: 3px;
+  color: var(--subtle);
+  font: 500 9px/1 var(--font-mono);
+}
+
+.daily-item__icon {
+  color: var(--yellow);
+  font-size: 20px;
+  line-height: 1;
+  text-align: center;
+}
+
+.daily-item__min,
+.daily-item__max {
+  text-align: right;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.daily-item__min {
+  color: var(--cyan);
+}
+
+.daily-item__max {
+  color: var(--yellow);
+  font-weight: 700;
+}
+
+.daily-item__rain {
+  color: var(--ink);
+  font: 600 9px/1 var(--font-mono);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.daily-item.is-today {
+  margin: 0 -7px;
+  padding-left: 9px;
+  padding-right: 9px;
+  border-radius: 12px;
+  background: rgba(140,219,255,.07);
+}
+
+.daily-item.is-today .daily-item__day strong {
+  color: var(--yellow);
+}
+
+/* 24 h : carte plus compacte, sans changer son contenu */
+.hourly-card {
+  padding: 20px 24px 18px;
+}
+
+.hourly-card__header {
+  margin-bottom: 13px;
+}
+
+.hourly-forecast {
+  padding-bottom: 5px;
+}
+
+.hourly-chart {
+  height: 105px;
+  margin-top: 7px;
+}
+
+/* Mobile : tout s'empile proprement sans débordement */
+@media (max-width: 760px) {
+  .weather-side {
+    grid-template-rows: 265px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .weather-side .atmosphere-card {
+    height: 265px;
+    min-height: 0;
+    padding: 22px;
+    border-radius: 25px;
+  }
+
+  .weather-side .sky-illustration {
+    height: 158px;
+    min-height: 0;
+    margin-top: 14px;
+  }
+
+  .daily-card {
+    height: 420px;
+    padding: 18px;
+    border-radius: 23px;
+  }
+
+  .daily-forecast {
+    height: calc(100% - 50px);
+  }
+
+  .hourly-card {
+    padding: 17px;
+    border-radius: 23px;
+  }
+
+  .hourly-chart {
+    height: 95px;
+  }
+}
+
+@media (max-width: 390px) {
+  .weather-side {
+    grid-template-rows: 245px minmax(0, 1fr);
+  }
+
+  .weather-side .atmosphere-card {
+    height: 245px;
+  }
+
+  .weather-side .sky-illustration {
+    height: 138px;
+  }
+
+  .daily-card {
+    height: 390px;
+    padding: 15px;
+  }
+
+  .daily-item {
+    grid-template-columns: minmax(64px, 1fr) 28px 40px 40px 34px;
+    gap: 5px;
+    min-height: 47px;
+  }
+
+  .daily-item__day strong {
+    font-size: 10px;
+  }
+
+  .daily-item__day small,
+  .daily-item__rain {
+    font-size: 8px;
+  }
+
+  .hourly-chart {
+    height: 85px;
+  }
+}
+/* =========================================================
+   24 H — heures + courbe dans le même défilement
+   ========================================================= */
+
+.hourly-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 2px;
+}
+
+.hourly-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.hourly-scroll__content {
+  width: max-content;
+  min-width: 100%;
+}
+
+/* Les 24 heures ont une vraie largeur horizontale */
+.hourly-scroll__content .hourly-forecast {
+  width: max-content;
+  min-width: calc(24 * 56px + 23 * 6px);
+  grid-template-columns: repeat(24, 56px);
+}
+
+/* La courbe prend exactement la même largeur */
+.hourly-scroll__content .hourly-chart {
+  width: calc(24 * 56px + 23 * 6px);
+  min-width: calc(24 * 56px + 23 * 6px);
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .hourly-scroll__content .hourly-forecast {
+    min-width: calc(24 * 54px + 23 * 6px);
+    grid-template-columns: repeat(24, 54px);
+  }
+
+  .hourly-scroll__content .hourly-chart {
+    width: calc(24 * 54px + 23 * 6px);
+    min-width: calc(24 * 54px + 23 * 6px);
+  }
+}
+
+@media (max-width: 390px) {
+  .hourly-scroll__content .hourly-forecast {
+    min-width: calc(24 * 52px + 23 * 6px);
+    grid-template-columns: repeat(24, 52px);
+  }
+
+  .hourly-scroll__content .hourly-chart {
+    width: calc(24 * 52px + 23 * 6px);
+    min-width: calc(24 * 52px + 23 * 6px);
+  }
+}
+
+/* =========================================================
+   24 H — ALIGNEMENT EXACT DES HEURES ET DE LA COURBE
+   ========================================================= */
+
+.hourly-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hourly-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.hourly-scroll__content {
+  width: max-content;
+  min-width: 100%;
+}
+
+/* 24 heures :
+   24 × 56px + 23 × 6px = 1482px */
+.hourly-scroll__content .hourly-forecast {
+  width: 1482px !important;
+  min-width: 1482px !important;
+  max-width: none !important;
+
+  display: grid;
+  grid-template-columns: repeat(24, 56px);
+  gap: 6px;
+
+  overflow: visible;
+}
+
+/* Courbe exactement sur la même largeur */
+.hourly-scroll__content .hourly-chart {
+  width: 1482px !important;
+  min-width: 1482px !important;
+  max-width: none !important;
+
+  margin-top: 7px;
+  overflow: hidden;
+}
+
+.hourly-scroll__content .hourly-chart__inner {
+  width: 1482px;
+  min-width: 1482px;
+}
+
+.hourly-scroll__content .hourly-chart__svg {
+  display: block;
+  width: 1482px;
+  min-width: 1482px;
+  height: 100%;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+/* 24 × 54 + 23 × 6 = 1434px */
+@media (max-width: 600px) {
+
+  .hourly-scroll__content .hourly-forecast {
+    width: 1434px !important;
+    min-width: 1434px !important;
+    grid-template-columns: repeat(24, 54px);
+    gap: 6px;
+  }
+
+  .hourly-scroll__content .hourly-chart {
+    width: 1434px !important;
+    min-width: 1434px !important;
+  }
+
+  .hourly-scroll__content .hourly-chart__inner,
+  .hourly-scroll__content .hourly-chart__svg {
+    width: 1434px;
+    min-width: 1434px;
+  }
+}
+
+/* 24 × 52 + 23 × 6 = 1368px */
+@media (max-width: 390px) {
+
+  .hourly-scroll__content .hourly-forecast {
+    width: 1368px !important;
+    min-width: 1368px !important;
+    grid-template-columns: repeat(24, 52px);
+    gap: 6px;
+  }
+
+  .hourly-scroll__content .hourly-chart {
+    width: 1368px !important;
+    min-width: 1368px !important;
+  }
+
+  .hourly-scroll__content .hourly-chart__inner,
+  .hourly-scroll__content .hourly-chart__svg {
+    width: 1368px;
+    min-width: 1368px;
+  }
+}
+/* =========================================================
+   ATMOS — COULEUR THERMIQUE DES CARTES 24 H
+   ========================================================= */
+
+.hourly-item {
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+/* Froid */
+.hourly-item.temperature-cold {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(75, 180, 255, 0.20),
+      rgba(40, 120, 210, 0.10)
+    );
+  border: 1px solid rgba(105, 205, 255, 0.20);
+}
+
+/* Frais */
+.hourly-item.temperature-cool {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(90, 210, 220, 0.16),
+      rgba(70, 170, 210, 0.08)
+    );
+  border: 1px solid rgba(120, 220, 235, 0.16);
+}
+
+/* Température intermédiaire */
+.hourly-item.temperature-neutral {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 225, 125, 0.10),
+      rgba(255, 255, 255, 0.045)
+    );
+  border: 1px solid rgba(255, 235, 160, 0.12);
+}
+
+/* Chaud */
+.hourly-item.temperature-warm {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 174, 74, 0.17),
+      rgba(255, 130, 60, 0.08)
+    );
+  border: 1px solid rgba(255, 190, 90, 0.18);
+}
+
+/* Très chaud */
+.hourly-item.temperature-hot {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 105, 75, 0.20),
+      rgba(235, 70, 65, 0.09)
+    );
+  border: 1px solid rgba(255, 135, 100, 0.22);
+}
+
+/* Petit effet au survol */
+.hourly-item:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 22px rgba(3, 18, 45, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.10);
+}
