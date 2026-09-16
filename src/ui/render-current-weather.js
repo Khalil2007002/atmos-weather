@@ -7,6 +7,7 @@ import {
 } from '../utils/formatters.js';
 
 import { describeWeather } from '../utils/weather-code.js';
+import { degreesToCardinal } from '../utils/outdoor-analyzer.js';
 
 export function renderCurrentWeather(weather) {
   const condition = describeWeather(
@@ -145,6 +146,62 @@ export function renderCurrentWeather(weather) {
         </strong>
       </span>
 
+    </div>
+
+    <div class="weather-metrics-grid" aria-label="Paramètres atmosphériques">
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">💨</span>
+        <div class="metric-card__info">
+          <small>Vent</small>
+          <strong>${weather.windSpeed != null ? Math.round(weather.windSpeed) + ' km/h' : '—'}</strong>
+          <span>${weather.windDirection != null ? degreesToCardinal(weather.windDirection) : ''}</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">💧</span>
+        <div class="metric-card__info">
+          <small>Humidité</small>
+          <strong>${weather.humidity != null ? Math.round(weather.humidity) + '%' : '—'}</strong>
+          <span>${weather.humidity != null ? (weather.humidity > 60 ? 'Humide' : 'Agréable') : ''}</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">🧭</span>
+        <div class="metric-card__info">
+          <small>Pression</small>
+          <strong>${weather.surfacePressure != null ? Math.round(weather.surfacePressure) + ' hPa' : '—'}</strong>
+          <span>${weather.surfacePressure != null ? (weather.surfacePressure >= 1013 ? 'Anticyclone' : 'Dépression') : ''}</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">☀️</span>
+        <div class="metric-card__info">
+          <small>Indice UV</small>
+          <strong>${weather.uvIndex != null ? Math.round(weather.uvIndex) : '—'}</strong>
+          <span>${getUvLevel(weather.uvIndex)}</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">👁️</span>
+        <div class="metric-card__info">
+          <small>Visibilité</small>
+          <strong>${weather.visibility != null ? Math.round(weather.visibility) + ' km' : '—'}</strong>
+          <span>${weather.visibility != null ? (weather.visibility > 9 ? 'Excellente' : 'Modérée') : ''}</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">🌅</span>
+        <div class="metric-card__info">
+          <small>Soleil</small>
+          <strong>${formatTimeOnly(weather.sunrise)}</strong>
+          <span>Coucher ${formatTimeOnly(weather.sunset)}</span>
+        </div>
+      </div>
     </div>
   `;
 
@@ -839,3 +896,19 @@ export function renderWeatherLoading() {
   updated.textContent =
     'Actualisation des observations…';
 }
+
+function formatTimeOnly(isoString) {
+  if (!isoString) return '—';
+  const match = String(isoString).match(/T(\d{2}):(\d{2})/);
+  return match ? `${match[1]}h${match[2]}` : '—';
+}
+
+function getUvLevel(uv) {
+  if (uv == null) return '—';
+  const num = Number(uv);
+  if (num <= 2) return 'Faible';
+  if (num <= 5) return 'Modéré';
+  if (num <= 7) return 'Élevé';
+  if (num <= 10) return 'Très fort';
+  return 'Extrême';
+}

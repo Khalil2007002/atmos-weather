@@ -7,6 +7,6 @@
     "dev": "node server.mjs",
     "build": "node build.mjs",
     "preview": "node server.mjs --dist",
-    "check": "node --check src/main.js && node --check src/services/weather-api.js"
+    "check": "node --check src/main.js && node --check src/services/weather-api.js && node --check src/services/marine-api.js && node --check src/utils/outdoor-analyzer.js && node --check src/ui/surf-ui.js && node --check src/ui/outdoor-ui.js && node --check server.mjs"
   }
 }

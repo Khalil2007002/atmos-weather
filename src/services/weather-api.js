@@ -3,13 +3,13 @@ const REQUEST_TIMEOUT_MS = 12_000;
 
 const WEATHER_PARAMETERS = {
   current:
-    'temperature_2m,apparent_temperature,weather_code,is_day',
+    'temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility',
 
   hourly:
-    'temperature_2m,weather_code,precipitation_probability',
+    'temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,relative_humidity_2m,uv_index',
 
   daily:
-    'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+    'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,uv_index_max',
 
   timezone: 'auto',
   forecast_days: '16',
@@ -147,6 +147,8 @@ function normalizeWeather(data, location) {
       name: location.name,
       country: location.country,
       timezone: data.timezone || 'UTC',
+      latitude: Number(data.latitude ?? location.latitude),
+      longitude: Number(data.longitude ?? location.longitude),
     },
 
     temperature: current.temperature_2m,
@@ -154,8 +156,18 @@ function normalizeWeather(data, location) {
     weatherCode: current.weather_code,
     isDay: Boolean(current.is_day),
 
+    humidity: current.relative_humidity_2m ?? null,
+    windSpeed: current.wind_speed_10m ?? null,
+    windDirection: current.wind_direction_10m ?? null,
+    windGusts: current.wind_gusts_10m ?? null,
+    surfacePressure: current.surface_pressure ?? null,
+    visibility: current.visibility ? current.visibility / 1000 : null, // in km
+
     minTemperature: daily.temperature_2m_min[0],
     maxTemperature: daily.temperature_2m_max[0],
+    sunrise: daily.sunrise?.[0] ?? null,
+    sunset: daily.sunset?.[0] ?? null,
+    uvIndex: daily.uv_index_max?.[0] ?? null,
 
     observedAt: current.time,
 
@@ -165,6 +177,10 @@ function normalizeWeather(data, location) {
       weatherCode: hourly.weather_code,
       precipitationProbability:
         hourly.precipitation_probability || [],
+      windSpeed: hourly.wind_speed_10m || [],
+      windDirection: hourly.wind_direction_10m || [],
+      humidity: hourly.relative_humidity_2m || [],
+      uvIndex: hourly.uv_index || [],
     },
 
     daily: {
@@ -174,6 +190,11 @@ function normalizeWeather(data, location) {
       temperatureMin: daily.temperature_2m_min,
       precipitationProbability:
         daily.precipitation_probability_max || [],
+      precipitationSum: daily.precipitation_sum || [],
+      windSpeedMax: daily.wind_speed_10m_max || [],
+      sunrise: daily.sunrise || [],
+      sunset: daily.sunset || [],
+      uvIndexMax: daily.uv_index_max || [],
     },
   };
 }

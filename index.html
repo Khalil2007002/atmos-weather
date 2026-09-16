@@ -282,52 +282,96 @@
           </article>
 
           <!-- =====================================================
-               PHASE 3 — PRÉVISIONS 24 HEURES
+               PHASE 7 — VUES SPÉCIALISÉES (24H / SURF / OUTDOOR)
                ===================================================== -->
+          <nav class="dashboard-tabs glass-card" aria-label="Modules du dashboard" role="tablist">
+            <button
+              class="tab-button is-active"
+              id="tab-hourly"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="hourly-section"
+            >
+              <span class="tab-button__icon" aria-hidden="true">⏱️</span>
+              <span>Prévisions 24h</span>
+            </button>
 
-          <section
-            class="hourly-card glass-card"
-            aria-labelledby="hourly-title"
-          >
+            <button
+              class="tab-button"
+              id="tab-surf"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="surf-section"
+            >
+              <span class="tab-button__icon" aria-hidden="true">🌊</span>
+              <span>Surf &amp; Océan</span>
+              <span class="tab-button__pill" id="surf-tab-pill">Live</span>
+            </button>
 
-            <div class="hourly-card__header">
+            <button
+              class="tab-button"
+              id="tab-outdoor"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="outdoor-section"
+            >
+              <span class="tab-button__icon" aria-hidden="true">🎯</span>
+              <span>Outdoor</span>
+            </button>
+          </nav>
 
-              <div>
-                <p class="eyebrow">
-                    Prévisions horaires
-                </p>
+          <div id="hourly-section" class="tab-panel is-active" role="tabpanel" aria-labelledby="tab-hourly">
+            <section
+              class="hourly-card glass-card"
+              aria-labelledby="hourly-title"
+            >
 
-                <h2 id="hourly-title">
-                    Prochaines 24 heures
-                </h2>
+              <div class="hourly-card__header">
+
+                <div>
+                  <p class="eyebrow">
+                      Prévisions horaires
+                  </p>
+
+                  <h2 id="hourly-title">
+                      Prochaines 24 heures
+                  </h2>
+                </div>
+
+                <span class="hourly-card__badge">
+                  24 h
+                </span>
+
               </div>
 
-              <span class="hourly-card__badge">
-                24 h
-              </span>
 
-            </div>
+              <div class="hourly-scroll" id="hourly-scroll">
+                <div class="hourly-scroll__content">
 
+                  <div
+                    class="hourly-forecast"
+                    id="hourly-forecast"
+                    aria-live="polite"
+                  ></div>
 
-            <div class="hourly-scroll" id="hourly-scroll">
-              <div class="hourly-scroll__content">
+                  <div
+                    class="hourly-chart"
+                    id="hourly-chart"
+                    aria-label="Évolution de la température sur les prochaines 24 heures"
+                  ></div>
 
-                <div
-                  class="hourly-forecast"
-                  id="hourly-forecast"
-                  aria-live="polite"
-                ></div>
-
-                <div
-                  class="hourly-chart"
-                  id="hourly-chart"
-                  aria-label="Évolution de la température sur les prochaines 24 heures"
-                ></div>
-
+                </div>
               </div>
-            </div>
 
-          </section>
+            </section>
+          </div>
+
+          <div id="surf-section" class="tab-panel" role="tabpanel" aria-labelledby="tab-surf" hidden></div>
+
+          <div id="outdoor-section" class="tab-panel" role="tabpanel" aria-labelledby="tab-outdoor" hidden></div>
 
           </div>
 
@@ -456,14 +500,14 @@
 
           <p>
             <strong>
-              Phase 2
+              Phase 7
             </strong>
 
             <span>
               —
             </span>
 
-            recherche, position et lieux enregistrés.
+            Surf &amp; Houle en direct (Open-Meteo Marine) et Activités Outdoor.
           </p>
 
         </section>

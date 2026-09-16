@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const rootDirectory = fileURLToPath(new URL(process.argv.includes('--dist') ? './dist/' : './', import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const FORECAST_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
+const MARINE_ENDPOINT = 'https://marine-api.open-meteo.com/v1/marine';
 const GEOCODING_ENDPOINT = 'https://geocoding-api.open-meteo.com/v1/search';
 const REVERSE_GEOCODING_ENDPOINT = 'https://nominatim.openstreetmap.org/reverse';
 const reverseGeocodeCache = new Map();
@@ -19,12 +20,17 @@ const mimeTypes = {
   '.svg': 'image/svg+xml',
 };
 
-createServer(async (request, response) => {
+const server = createServer(async (request, response) => {
   const requestUrl = new URL(request.url || '/', `http://${request.headers.host || '127.0.0.1'}`);
   const requestedPath = requestUrl.pathname;
 
   if (requestedPath === '/api/weather') {
     await proxyWeather(requestUrl, response);
+    return;
+  }
+
+  if (requestedPath === '/api/marine') {
+    await proxyMarine(requestUrl, response);
     return;
   }
 
@@ -52,8 +58,21 @@ createServer(async (request, response) => {
     'Cache-Control': 'no-store',
   });
   createReadStream(filePath).pipe(response);
-}).listen(port, '127.0.0.1', () => {
-  console.log(`Atmos is running at http://127.0.0.1:${port}`);
+});
+
+let currentPort = port;
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.warn(`[Atmos] Port ${currentPort} indisponible, tentative sur ${currentPort + 1}...`);
+    currentPort++;
+    server.listen(currentPort, '127.0.0.1');
+  } else {
+    console.error('[Atmos] Erreur serveur:', err);
+  }
+});
+
+server.listen(currentPort, '127.0.0.1', () => {
+  console.log(`Atmos is running at http://127.0.0.1:${currentPort}`);
 });
 
 async function proxyWeather(requestUrl, response) {
@@ -66,30 +85,45 @@ async function proxyWeather(requestUrl, response) {
   }
 
   const upstreamUrl = new URL(FORECAST_ENDPOINT);
-  upstreamUrl.search = new URLSearchParams({
-    latitude: String(latitude),
-    longitude: String(longitude),
-    current: 'temperature_2m,apparent_temperature,weather_code,is_day',
-    daily: 'temperature_2m_max,temperature_2m_min',
-    timezone: 'auto',
-    forecast_days: '1',
-  }).toString();
-
-  try {
-    const upstreamResponse = await fetch(upstreamUrl, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(12_000),
-    });
-    const payload = await upstreamResponse.text();
-
-    response.writeHead(upstreamResponse.ok ? 200 : 502, {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-    });
-    response.end(payload);
-  } catch {
-    sendJson(response, 502, { error: 'Weather provider unavailable' });
+  const params = new URLSearchParams(requestUrl.searchParams);
+  if (!params.has('current')) {
+    params.set('current', 'temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility');
   }
+  if (!params.has('hourly')) {
+    params.set('hourly', 'temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,relative_humidity_2m,uv_index');
+  }
+  if (!params.has('daily')) {
+    params.set('daily', 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,uv_index_max');
+  }
+  if (!params.has('timezone')) params.set('timezone', 'auto');
+  if (!params.has('forecast_days')) params.set('forecast_days', '16');
+  upstreamUrl.search = params.toString();
+
+  await proxyJson(upstreamUrl, response);
+}
+
+async function proxyMarine(requestUrl, response) {
+  const latitude = Number(requestUrl.searchParams.get('latitude'));
+  const longitude = Number(requestUrl.searchParams.get('longitude'));
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) {
+    sendJson(response, 400, { error: 'Invalid marine coordinates' });
+    return;
+  }
+
+  const upstreamUrl = new URL(MARINE_ENDPOINT);
+  const params = new URLSearchParams(requestUrl.searchParams);
+  if (!params.has('hourly')) {
+    params.set('hourly', 'wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,swell_wave_peak_period,wind_wave_height');
+  }
+  if (!params.has('daily')) {
+    params.set('daily', 'wave_height_max,wave_direction_dominant,wave_period_max');
+  }
+  if (!params.has('timezone')) params.set('timezone', 'auto');
+  if (!params.has('forecast_days')) params.set('forecast_days', '7');
+  upstreamUrl.search = params.toString();
+
+  await proxyJson(upstreamUrl, response);
 }
 
 function sendJson(response, statusCode, body) {

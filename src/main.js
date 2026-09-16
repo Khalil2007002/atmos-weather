@@ -1,11 +1,14 @@
 import { APP_CONFIG } from './config.js';
 import { reverseGeocode, searchLocations } from './services/geocoding-api.js';
 import { getCurrentWeather } from './services/weather-api.js';
+import { getMarineForecast } from './services/marine-api.js';
 import {
   renderCurrentWeather,
   renderWeatherError,
   renderWeatherLoading,
 } from './ui/render-current-weather.js';
+import { renderSurfCard } from './ui/surf-ui.js';
+import { renderOutdoorCard } from './ui/outdoor-ui.js';
 import {
   renderFavoriteToggle,
   renderFavorites,
@@ -21,10 +24,13 @@ import {
 import { applyTheme, getPreferredTheme, persistTheme } from './utils/theme.js';
 
 let activeWeatherRequest;
+let activeMarineRequest;
 let activeSearchRequest;
 let searchDebounce;
 let latestSearchResults = [];
 let currentLocation = APP_CONFIG.defaultLocation;
+let currentWeatherData = null;
+let currentMarineData = null;
 let favorites = [];
 
 function syncThemeControl(theme) {
@@ -57,7 +63,10 @@ async function loadWeather(location = currentLocation) {
   try {
     const weather = await getCurrentWeather(location, { signal: activeWeatherRequest.signal });
     currentLocation = location;
+    currentWeatherData = weather;
     renderCurrentWeather(weather);
+    renderOutdoorCard(weather);
+    loadSurfForecast(location, weather);
     syncFavoriteUi();
     showLocationStatus('');
   } catch (error) {
@@ -68,6 +77,41 @@ async function loadWeather(location = currentLocation) {
   } finally {
     document.querySelector('#refresh-button').classList.remove('is-loading');
   }
+}
+
+async function loadSurfForecast(location, weather = currentWeatherData) {
+  activeMarineRequest?.abort();
+  activeMarineRequest = new AbortController();
+
+  try {
+    const marineData = await getMarineForecast(location, { signal: activeMarineRequest.signal });
+    currentMarineData = marineData;
+    renderSurfCard(marineData, weather, { onSelectSpot: handleSelectSurfSpot });
+
+    const surfPill = document.querySelector('#surf-tab-pill');
+    if (surfPill) {
+      if (marineData.current?.waveHeight) {
+        surfPill.textContent = `${marineData.current.waveHeight.toFixed(1)}m`;
+        surfPill.style.display = 'inline-block';
+      } else if (marineData.nearestSpot) {
+        surfPill.textContent = 'Côte';
+        surfPill.style.display = 'inline-block';
+      } else {
+        surfPill.style.display = 'none';
+      }
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      renderSurfCard(null, weather);
+    }
+  }
+}
+
+async function handleSelectSurfSpot(spot) {
+  if (!spot) return;
+  showLocationStatus(`Chargement des prévisions de surf pour ${spot.name}…`);
+  await loadSurfForecast(spot, currentWeatherData);
+  showLocationStatus(`Spot actif : ${spot.name}`, 'success');
 }
 
 function setupLocationControls() {
@@ -223,8 +267,44 @@ function syncFavoriteUi() {
   });
 }
 
+function setupDashboardTabs() {
+  const tabs = [
+    { buttonId: '#tab-hourly', panelId: '#hourly-section' },
+    { buttonId: '#tab-surf', panelId: '#surf-section' },
+    { buttonId: '#tab-outdoor', panelId: '#outdoor-section' },
+  ];
+
+  tabs.forEach(({ buttonId, panelId }) => {
+    const btn = document.querySelector(buttonId);
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+      tabs.forEach(({ buttonId: otherBtnId, panelId: otherPanelId }) => {
+        const otherBtn = document.querySelector(otherBtnId);
+        const otherPanel = document.querySelector(otherPanelId);
+        const isTarget = otherBtnId === buttonId;
+
+        otherBtn?.classList.toggle('is-active', isTarget);
+        otherBtn?.setAttribute('aria-selected', String(isTarget));
+        if (otherPanel) {
+          if (isTarget) {
+            otherPanel.removeAttribute('hidden');
+            otherPanel.classList.add('is-active');
+          } else {
+            otherPanel.setAttribute('hidden', '');
+            otherPanel.classList.remove('is-active');
+          }
+        }
+      });
+    });
+  });
+}
+
 function bootstrap() {
   setupTheme();
+  setupDashboardTabs();
+  renderSurfCard(null, null);
+  renderOutdoorCard(null);
   setupLocationControls();
   setupFavorites();
   document.querySelector('#refresh-button').addEventListener('click', () => loadWeather(currentLocation));
