@@ -22,6 +22,11 @@ import {
   removeFavorite,
 } from './utils/location-storage.js';
 import { applyTheme, getPreferredTheme, persistTheme } from './utils/theme.js';
+import { authService } from './services/auth-service.js';
+import { showAuthModal } from './ui/auth-modal.js';
+import { showProfileModal } from './ui/profile-modal.js';
+import { showPremiumModal } from './ui/premium-modal.js';
+import { isFeatureAvailable } from './utils/premium-features.js';
 
 let activeWeatherRequest;
 let activeMarineRequest;
@@ -300,9 +305,52 @@ function setupDashboardTabs() {
   });
 }
 
+function setupAuth() {
+  const authBtn = document.querySelector('#auth-button');
+  const premiumBtn = document.querySelector('#premium-button');
+
+  function updateAuthUI() {
+    if (authService.isAuthenticated()) {
+      const user = authService.getUser();
+      const isPrem = authService.isPremium();
+      authBtn.textContent = '';
+      authBtn.innerHTML = isPrem
+        ? `<span style="color:gold;">✦</span> ${user.name || 'Profil'}`
+        : `👤 ${user.name || 'Profil'}`;
+      authBtn.onclick = () => showProfileModal();
+
+      if (isPrem) {
+        premiumBtn.innerHTML = '<span style="color:gold;">✦</span> Membre Premium';
+        premiumBtn.title = 'Vous bénéficiez de tous les accès Premium';
+      } else {
+        premiumBtn.innerHTML = '<span style="color:gold;">✦</span> Premium';
+        premiumBtn.title = 'Passer à Atmos Premium';
+      }
+    } else {
+      authBtn.innerHTML = '👤 Connexion';
+      authBtn.onclick = () => showAuthModal('login');
+      premiumBtn.innerHTML = '<span style="color:gold;">✦</span> Premium';
+      premiumBtn.title = 'Découvrir Atmos Premium';
+    }
+
+    if (currentWeatherData) {
+      renderCurrentWeather(currentWeatherData);
+      renderOutdoorCard(currentWeatherData);
+    }
+    if (currentMarineData) {
+      renderSurfCard(currentMarineData, currentWeatherData, { onSelectSpot: handleSelectSurfSpot });
+    }
+  }
+
+  premiumBtn.addEventListener('click', () => showPremiumModal());
+  window.addEventListener('atmos:auth-changed', updateAuthUI);
+  authService.init().then(updateAuthUI);
+}
+
 function bootstrap() {
   setupTheme();
   setupDashboardTabs();
+  setupAuth();
   renderSurfCard(null, null);
   renderOutdoorCard(null);
   setupLocationControls();

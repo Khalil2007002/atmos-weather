@@ -1,0 +1,42 @@
+[
+  {
+    "id": "0c5daf3b0c1ea414409c871b996d69a2",
+    "email": "test_1789683602865@example.com",
+    "name": "Alice Test",
+    "passwordHash": "ecf99bd60c5bf71c93f9ebfda2c433e6e0749afe9e42605c877216a1a58c61b8d278121e66d9608f4677d78932138a6d1b7818f840ff4ee340a39e62cb21b2a4",
+    "salt": "1d66f6d157bd64c7c45f6cccaaa825e3",
+    "tier": "free",
+    "subscription": null,
+    "sessions": [
+      "1d327e148b563312c2ffdd742aa8041ec135e3208c1dbeec2764051124c2a7c3"
+    ],
+    "createdAt": "2026-09-17T22:20:03.145Z"
+  },
+  {
+    "id": "6111e81af1cdd4c4d0e88b7f6f6b8bc1",
+    "email": "testuser@example.com",
+    "name": "Test User",
+    "passwordHash": "ac3b2acdeca820af185d1ada1e106407406837b8b4ca3925957a8af4e032a40be07c1460c8f24e5d51efe1095800e40d2866e7a03eb5d9602d3dc2134de91ec5",
+    "salt": "c318590b22afd24b477520ce18f68ff4",
+    "tier": "free",
+    "subscription": null,
+    "sessions": [
+      "482044235066a31bb43dcd404a63e6c9635286d5cb073be84f03815576060ad0",
+      "ce7dc3cdd4b7e69552bb41854cb663697ecfc27cca5f096839d2ac9dbad0aea7"
+    ],
+    "createdAt": "2026-09-17T22:29:37.829Z"
+  },
+  {
+    "id": "f225d86c2ea534d70018b121ac666c29",
+    "email": "mohamedkhalil.elabdellaoui@gmail.com",
+    "name": "el abdellaoui",
+    "passwordHash": "84934fd043048871afae647a7a7db710ba28d1882a365c23a50a3402321a471b928ce60482f5b1289e73708dfdd4a46f61858e29dc418f86efb4ad0862faba01",
+    "salt": "359fc971dbb81b43999d5de13ef809cd",
+    "tier": "free",
+    "subscription": null,
+    "sessions": [
+      "9519fbe758531b9f93a7beb21678a43dc227fc99f3ee16d1c5d711b2cbac1af2"
+    ],
+    "createdAt": "2026-09-17T22:30:51.697Z"
+  }
+]

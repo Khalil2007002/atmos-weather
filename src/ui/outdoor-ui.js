@@ -1,4 +1,6 @@
 import { evaluateOutdoorActivities } from '../utils/outdoor-analyzer.js';
+import { authService } from '../services/auth-service.js';
+import { showPremiumModal } from './premium-modal.js';
 
 export function renderOutdoorCard(weatherData) {
   const container = document.querySelector('#outdoor-section');
@@ -14,6 +16,7 @@ export function renderOutdoorCard(weatherData) {
   }
 
   const analysis = evaluateOutdoorActivities(weatherData);
+  const isPremium = authService.isPremium();
 
   container.innerHTML = `
     <article class="outdoor-card glass-card" aria-label="Activités Outdoor et Recommandations">
@@ -36,9 +39,14 @@ export function renderOutdoorCard(weatherData) {
       <div class="outdoor-activities-grid">
         ${analysis.activities
           .map((act) => {
+            const isFreeActivity = act.id === 'running' || act.id === 'hiking';
+            const isLocked = !isPremium && !isFreeActivity;
             const barWidth = Math.max(10, act.score);
+
             return `
-              <div class="activity-box ${act.status.class}">
+              <div class="activity-box ${act.status.class} ${isLocked ? 'activity-box--locked' : ''}" 
+                   data-locked="${isLocked ? 'true' : 'false'}"
+                   ${isLocked ? 'title="Fonctionnalité Premium — Cliquez pour débloquer"' : ''}>
                 <div class="activity-box__top">
                   <div class="activity-box__ident">
                     <span class="activity-box__icon" aria-hidden="true">${act.icon}</span>
@@ -57,6 +65,12 @@ export function renderOutdoorCard(weatherData) {
                 </div>
 
                 <p class="activity-box__advice">${escapeHtml(act.advice)}</p>
+
+                ${isLocked ? `
+                  <div class="activity-box__lock-overlay">
+                    <span class="premium-lock-pill"><span style="color:gold;">✦</span> Atmos Premium</span>
+                  </div>
+                ` : ''}
               </div>
             `;
           })
@@ -64,6 +78,16 @@ export function renderOutdoorCard(weatherData) {
       </div>
     </article>
   `;
+
+  const grid = container.querySelector('.outdoor-activities-grid');
+  if (grid) {
+    grid.addEventListener('click', (e) => {
+      const lockedBox = e.target.closest('.activity-box--locked');
+      if (lockedBox) {
+        showPremiumModal();
+      }
+    });
+  }
 }
 
 function escapeHtml(text) {

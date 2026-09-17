@@ -1,5 +1,7 @@
 import { degreesToCardinal, evaluateSurfConditions } from '../utils/outdoor-analyzer.js';
 import { POPULAR_SURF_SPOTS } from '../services/marine-api.js';
+import { authService } from '../services/auth-service.js';
+import { showPremiumModal } from './premium-modal.js';
 
 export function renderSurfCard(marineData, weatherData, { onSelectSpot } = {}) {
   const container = document.querySelector('#surf-section');
@@ -57,11 +59,20 @@ export function renderSurfCard(marineData, weatherData, { onSelectSpot } = {}) {
           <label for="surf-spot-select" class="sr-only">Changer de spot</label>
           <select id="surf-spot-select" class="surf-select" aria-label="Sélectionner un spot de surf">
             <optgroup label="Spots Populaires (Maroc &amp; Monde)">
-              ${POPULAR_SURF_SPOTS.map(
-                (s) => `<option value="${s.id}" ${nearestSpot?.id === s.id ? 'selected' : ''}>${s.name} (${s.country})</option>`
-              ).join('')}
+              ${POPULAR_SURF_SPOTS.map((s) => {
+                const isCurrent = nearestSpot?.id === s.id;
+                const isPrem = authService.isPremium();
+                const lockPrefix = (!isPrem && !isCurrent) ? '🔒 ' : '';
+                const lockSuffix = (!isPrem && !isCurrent) ? ' [✦ Premium]' : '';
+                return `<option value="${s.id}" ${isCurrent ? 'selected' : ''}>${lockPrefix}${s.name} (${s.country})${lockSuffix}</option>`;
+              }).join('')}
             </optgroup>
           </select>
+          ${!authService.isPremium() ? `
+            <button type="button" id="surf-spots-upgrade-btn" class="surf-upgrade-btn" title="Débloquer tous les 15 spots">
+              <span style="color:gold;">✦</span> Débloquer 15 spots
+            </button>
+          ` : ''}
         </div>
       </div>
 
@@ -136,8 +147,22 @@ export function renderSurfCard(marineData, weatherData, { onSelectSpot } = {}) {
   if (select && onSelectSpot) {
     select.addEventListener('change', (e) => {
       const selectedId = e.target.value;
+      const isPrem = authService.isPremium();
+      if (!isPrem && selectedId !== (nearestSpot?.id || POPULAR_SURF_SPOTS[0].id)) {
+        // Revert selection to current spot
+        select.value = nearestSpot?.id || POPULAR_SURF_SPOTS[0].id;
+        showPremiumModal();
+        return;
+      }
       const foundSpot = POPULAR_SURF_SPOTS.find((s) => s.id === selectedId);
       if (foundSpot) onSelectSpot(foundSpot);
+    });
+  }
+
+  const upgradeBtn = container.querySelector('#surf-spots-upgrade-btn');
+  if (upgradeBtn) {
+    upgradeBtn.addEventListener('click', () => {
+      showPremiumModal();
     });
   }
 }

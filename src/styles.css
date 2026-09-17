@@ -2538,18 +2538,18 @@ h1 span {
    ========================================================= */
 .weather-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 10px;
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   width: 100%;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 860px) {
   .weather-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 7px 8px;
     padding-top: 10px;
   }
 }
@@ -2557,9 +2557,9 @@ h1 span {
 .metric-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 11px;
-  border-radius: 13px;
+  gap: 8px;
+  padding: 6px 9px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
@@ -2578,13 +2578,13 @@ h1 span {
 }
 
 .metric-card__icon {
-  font-size: 17px;
+  font-size: 15px;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -2600,7 +2600,7 @@ h1 span {
 }
 
 .metric-card__info small {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -2609,7 +2609,7 @@ h1 span {
 }
 
 .metric-card__info strong {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--ink);
@@ -2617,7 +2617,7 @@ h1 span {
 }
 
 .metric-card__info span {
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--subtle);
   font-weight: 500;
   line-height: 1.15;
@@ -3206,4 +3206,124 @@ h1 span {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.35;
+}
+
+/* =========================================================
+   PHASE 8 — ATMOS PREMIUM STYLES
+   ========================================================= */
+
+/* Outdoor Locked Cards */
+.activity-box--locked {
+  position: relative;
+  cursor: pointer;
+  border-color: rgba(255, 215, 0, 0.25) !important;
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+}
+
+.activity-box--locked:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 215, 0, 0.5) !important;
+  box-shadow: 0 8px 24px rgba(255, 215, 0, 0.12);
+}
+
+.activity-box--locked .activity-bar,
+.activity-box--locked .activity-box__advice {
+  opacity: 0.45;
+  filter: blur(1.5px);
+}
+
+.activity-box__lock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 26, 53, 0.55);
+  backdrop-filter: blur(2px);
+  border-radius: inherit;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.premium-lock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.85), rgba(118, 75, 162, 0.85));
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  letter-spacing: 0.02em;
+}
+
+/* 16-Day Forecast Locked Items */
+.daily-item--locked {
+  position: relative;
+  cursor: pointer;
+  border-color: rgba(255, 215, 0, 0.2) !important;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+
+.daily-item--locked:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 215, 0, 0.45) !important;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.daily-item__locked-pill {
+  grid-column: span 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  border-radius: 999px;
+  padding: 4px 10px;
+  text-align: center;
+}
+
+/* Surf Spot Picker Premium Upgrade Button */
+.surf-upgrade-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+  white-space: nowrap;
+}
+
+.surf-upgrade-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Topbar Buttons Responsive Adjustments */
+.topbar-premium-btn,
+.topbar-auth-btn {
+  transition: transform 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.topbar-premium-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+}
+
+.topbar-auth-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.16) !important;
 }

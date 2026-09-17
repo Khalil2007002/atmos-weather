@@ -8,6 +8,8 @@ import {
 
 import { describeWeather } from '../utils/weather-code.js';
 import { degreesToCardinal } from '../utils/outdoor-analyzer.js';
+import { authService } from '../services/auth-service.js';
+import { showPremiumModal } from './premium-modal.js';
 
 export function renderCurrentWeather(weather) {
   const condition = describeWeather(
@@ -485,113 +487,63 @@ function renderDailyForecast(weather) {
     return;
   }
 
-  const totalDays =
-    Math.min(
-      16,
-      weather.daily.time.length,
-    );
+  const isPremium = authService.isPremium();
+  const totalDays = Math.min(16, weather.daily.time.length);
 
-  container.innerHTML =
-    Array.from(
-      {
-        length: totalDays,
-      },
-      (_, index) => {
+  container.innerHTML = Array.from(
+    { length: totalDays },
+    (_, index) => {
+      const date = weather.daily.time[index];
+      const maxTemperature = weather.daily.temperatureMax[index];
+      const minTemperature = weather.daily.temperatureMin[index];
+      const weatherCode = weather.daily.weatherCode[index];
+      const rainProbability = weather.daily.precipitationProbability?.[index] ?? 0;
+      const dayCondition = describeWeather(weatherCode, true);
+      const isToday = index === 0;
+      const isLocked = !isPremium && index >= 7;
 
-        const date =
-          weather.daily.time[index];
+      return `
+        <article
+          class="daily-item${isToday ? ' is-today' : ''}${isLocked ? ' daily-item--locked' : ''}"
+          ${isLocked ? 'title="Prévisions jours 8 à 16 — Cliquez pour débloquer Atmos Premium"' : ''}
+        >
+          <div class="daily-item__day">
+            <strong>
+              ${isToday ? "Aujourd'hui" : formatDailyDay(date)}
+            </strong>
+            <small>${formatDailyDate(date)}</small>
+          </div>
 
-        const maxTemperature =
-          weather.daily
-            .temperatureMax[index];
+          <span class="daily-item__icon" aria-hidden="true">
+            ${dayCondition.icon}
+          </span>
 
-        const minTemperature =
-          weather.daily
-            .temperatureMin[index];
-
-        const weatherCode =
-          weather.daily
-            .weatherCode[index];
-
-        const rainProbability =
-          weather.daily
-            .precipitationProbability?.[
-              index
-            ] ?? 0;
-
-        const dayCondition =
-          describeWeather(
-            weatherCode,
-            true,
-          );
-
-        const isToday =
-          index === 0;
-
-        return `
-          <article
-            class="daily-item${
-              isToday
-                ? ' is-today'
-                : ''
-            }"
-          >
-
-            <div
-              class="daily-item__day"
-            >
-
-              <strong>
-                ${
-                  isToday
-                    ? "Aujourd'hui"
-                    : formatDailyDay(
-                        date,
-                      )
-                }
-              </strong>
-
-              <small>
-                ${formatDailyDate(date)}
-              </small>
-
-            </div>
-
-            <span
-              class="daily-item__icon"
-              aria-hidden="true"
-            >
-              ${dayCondition.icon}
+          ${isLocked ? `
+            <span class="daily-item__locked-pill">
+              <span style="color:gold;">✦</span> Premium
             </span>
-
-            <span
-              class="daily-item__min"
-            >
-              ${formatTemperature(
-                minTemperature,
-              )}
+          ` : `
+            <span class="daily-item__min">
+              ${formatTemperature(minTemperature)}
             </span>
-
-            <span
-              class="daily-item__max"
-            >
-              ${formatTemperature(
-                maxTemperature,
-              )}
+            <span class="daily-item__max">
+              ${formatTemperature(maxTemperature)}
             </span>
-
-            <span
-              class="daily-item__rain"
-            >
-              ${formatNumber(
-                rainProbability,
-              )}%
+            <span class="daily-item__rain">
+              ${formatNumber(rainProbability)}%
             </span>
+          `}
+        </article>
+      `;
+    }
+  ).join('');
 
-          </article>
-        `;
-      },
-    ).join('');
+  container.onclick = (e) => {
+    const lockedItem = e.target.closest('.daily-item--locked');
+    if (lockedItem) {
+      showPremiumModal();
+    }
+  };
 }
 
 
