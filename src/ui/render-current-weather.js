@@ -75,107 +75,113 @@ export function renderCurrentWeather(weather) {
   );
 
   content.innerHTML = `
-    <div class="weather-summary weather-summary--enter">
+    <div class="weather-hero-row">
+      <div class="weather-summary weather-summary--enter">
 
-      <div
-        class="weather-icon weather-icon--${condition.kind}"
-        aria-hidden="true"
-      >
-        ${condition.icon}
-      </div>
-
-      <div class="weather-reading">
-
-        <p class="date-label">
-          ${titleCase(
-            formatLocalDate(
-              weather.location.timezone,
-            ),
-          )}
-        </p>
-
-        <div class="temperature">
-          ${formatTemperature(
-            weather.temperature,
-          )}
+        <div
+          class="weather-icon weather-icon--${condition.kind}"
+          aria-hidden="true"
+        >
+          ${condition.icon}
         </div>
 
-        <p class="condition">
-          ${escapeHtml(
-            condition.label,
-          )}
-        </p>
+        <div class="weather-reading">
 
-        <p class="feels-like">
-          Ressenti
-          <strong>
-            ${formatTemperature(
-              weather.apparentTemperature,
+          <p class="date-label">
+            ${titleCase(
+              formatLocalDate(
+                weather.location.timezone,
+              ),
             )}
-          </strong>
-        </p>
+          </p>
+
+          <div class="temperature">
+            ${formatTemperature(
+              weather.temperature,
+            )}
+          </div>
+
+          <p class="condition">
+            ${escapeHtml(
+              condition.label,
+            )}
+          </p>
+
+          <p class="feels-like">
+            Ressenti
+            <strong>
+              ${formatTemperature(
+                weather.apparentTemperature,
+              )}
+            </strong>
+          </p>
+
+        </div>
 
       </div>
 
-    </div>
+      <div
+        class="temperature-range"
+        aria-label="Températures du jour"
+      >
 
-    <div
-      class="temperature-range"
-      aria-label="Températures du jour"
-    >
+        <span>
+          <small>Min.</small>
 
-      <span>
-        <small>Min.</small>
+          <strong>
+            ${formatTemperature(
+              weather.minTemperature,
+            )}
+          </strong>
+        </span>
 
-        <strong>
-          ${formatTemperature(
-            weather.minTemperature,
-          )}
-        </strong>
-      </span>
+        <i aria-hidden="true"></i>
 
-      <i aria-hidden="true"></i>
+        <span>
+          <small>Max.</small>
 
-      <span>
-        <small>Max.</small>
+          <strong>
+            ${formatTemperature(
+              weather.maxTemperature,
+            )}
+          </strong>
+        </span>
 
-        <strong>
-          ${formatTemperature(
-            weather.maxTemperature,
-          )}
-        </strong>
-      </span>
-
+      </div>
     </div>
 
     <div class="weather-metrics-grid" aria-label="Paramètres atmosphériques">
+      <!-- 1. Vent -->
       <div class="metric-card">
         <span class="metric-card__icon" aria-hidden="true">💨</span>
         <div class="metric-card__info">
           <small>Vent</small>
           <strong>${weather.windSpeed != null ? Math.round(weather.windSpeed) + ' km/h' : '—'}</strong>
-          <span>${weather.windDirection != null ? degreesToCardinal(weather.windDirection) : ''}</span>
+          <span>${weather.windDirection != null ? degreesToCardinal(weather.windDirection) : 'Calme'}</span>
         </div>
       </div>
 
+      <!-- 2. Humidité & Point de rosée -->
       <div class="metric-card">
         <span class="metric-card__icon" aria-hidden="true">💧</span>
         <div class="metric-card__info">
           <small>Humidité</small>
           <strong>${weather.humidity != null ? Math.round(weather.humidity) + '%' : '—'}</strong>
-          <span>${weather.humidity != null ? (weather.humidity > 60 ? 'Humide' : 'Agréable') : ''}</span>
+          <span>${weather.dewPoint != null ? 'Pt rosée ' + Math.round(weather.dewPoint) + '°' : (weather.humidity != null && weather.humidity > 60 ? 'Humide' : 'Agréable')}</span>
         </div>
       </div>
 
+      <!-- 3. Précipitations -->
       <div class="metric-card">
-        <span class="metric-card__icon" aria-hidden="true">🧭</span>
+        <span class="metric-card__icon" aria-hidden="true">🌧️</span>
         <div class="metric-card__info">
-          <small>Pression</small>
-          <strong>${weather.surfacePressure != null ? Math.round(weather.surfacePressure) + ' hPa' : '—'}</strong>
-          <span>${weather.surfacePressure != null ? (weather.surfacePressure >= 1013 ? 'Anticyclone' : 'Dépression') : ''}</span>
+          <small>Précipitations</small>
+          <strong>${weather.precipitation != null ? Number(weather.precipitation).toFixed(1) + ' mm' : '0.0 mm'}</strong>
+          <span>Prob. ${weather.daily?.precipitationProbability?.[0] ?? weather.hourly?.precipitationProbability?.[0] ?? 0}%</span>
         </div>
       </div>
 
+      <!-- 4. Indice UV -->
       <div class="metric-card">
         <span class="metric-card__icon" aria-hidden="true">☀️</span>
         <div class="metric-card__info">
@@ -185,6 +191,17 @@ export function renderCurrentWeather(weather) {
         </div>
       </div>
 
+      <!-- 5. Pression -->
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">🧭</span>
+        <div class="metric-card__info">
+          <small>Pression</small>
+          <strong>${weather.surfacePressure != null ? Math.round(weather.surfacePressure) + ' hPa' : '—'}</strong>
+          <span>${weather.surfacePressure != null ? (weather.surfacePressure >= 1013 ? 'Anticyclone' : 'Dépression') : ''}</span>
+        </div>
+      </div>
+
+      <!-- 6. Visibilité -->
       <div class="metric-card">
         <span class="metric-card__icon" aria-hidden="true">👁️</span>
         <div class="metric-card__info">
@@ -194,12 +211,23 @@ export function renderCurrentWeather(weather) {
         </div>
       </div>
 
+      <!-- 7. Soleil -->
       <div class="metric-card">
         <span class="metric-card__icon" aria-hidden="true">🌅</span>
         <div class="metric-card__info">
           <small>Soleil</small>
           <strong>${formatTimeOnly(weather.sunrise)}</strong>
           <span>Coucher ${formatTimeOnly(weather.sunset)}</span>
+        </div>
+      </div>
+
+      <!-- 8. Rafales de vent -->
+      <div class="metric-card">
+        <span class="metric-card__icon" aria-hidden="true">🍃</span>
+        <div class="metric-card__info">
+          <small>Rafales</small>
+          <strong>${weather.windGusts != null ? Math.round(weather.windGusts) + ' km/h' : (weather.windSpeed != null ? Math.round(weather.windSpeed * 1.3) + ' km/h' : '—')}</strong>
+          <span>${weather.apparentTemperature != null ? 'Ress. ' + Math.round(weather.apparentTemperature) + '°' : 'Vitesse max'}</span>
         </div>
       </div>
     </div>
@@ -292,6 +320,18 @@ function renderHourlyForecast(weather) {
       startIndex + 24,
     );
 
+  const windSpeeds =
+    (weather.hourly.windSpeed || []).slice(
+      startIndex,
+      startIndex + 24,
+    );
+
+  const uvIndices =
+    (weather.hourly.uvIndex || []).slice(
+      startIndex,
+      startIndex + 24,
+    );
+
   if (!times.length) {
     container.innerHTML = `
       <p class="forecast-placeholder">
@@ -337,6 +377,12 @@ function renderHourlyForecast(weather) {
           const probability =
             precipitationProbability[index];
 
+          const wind =
+            windSpeeds[index];
+
+          const uv =
+            uvIndices[index];
+
           const condition =
             describeWeather(
               code,
@@ -355,36 +401,12 @@ function renderHourlyForecast(weather) {
               class="hourly-item ${temperatureClass}"
               data-temperature="${temperature}"
             >
-
-              <span
-                class="hourly-item__time"
-              >
-                ${formatHour(time)}
-              </span>
-
-              <span
-                class="hourly-item__icon"
-                aria-hidden="true"
-              >
-                ${condition.icon}
-              </span>
-
-              <strong
-                class="hourly-item__temperature"
-              >
-                ${formatTemperature(
-                  temperature,
-                )}
-              </strong>
-
-              <span
-                class="hourly-item__rain"
-              >
-                ${formatNumber(
-                  probability,
-                )}%
-              </span>
-
+              <span class="hourly-item__time">${formatHour(time)}</span>
+              <span class="hourly-item__icon" aria-hidden="true">${condition.icon}</span>
+              <strong class="hourly-item__temperature">${formatTemperature(temperature)}</strong>
+              <span class="hourly-item__rain" title="Probabilité de pluie : ${formatNumber(probability)}%">💧 ${formatNumber(probability)}%</span>
+              ${wind != null ? `<span class="hourly-item__wind" title="Vent : ${Math.round(wind)} km/h">💨 ${Math.round(wind)}k</span>` : ''}
+              ${uv != null && uv > 0 ? `<span class="hourly-item__uv" title="Indice UV : ${Math.round(uv)}">☀️ ${Math.round(uv)}</span>` : ''}
             </article>
           `;
         },

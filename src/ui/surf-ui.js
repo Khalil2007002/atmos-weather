@@ -127,7 +127,7 @@ export function renderSurfCard(marineData, weatherData, { onSelectSpot } = {}) {
       </div>
 
       <!-- Prévisions Surf 24h -->
-      ${renderHourlySurfPreview(hourly)}
+      ${renderHourlySurfPreview(hourly, weatherData)}
     </article>
   `;
 
@@ -142,33 +142,52 @@ export function renderSurfCard(marineData, weatherData, { onSelectSpot } = {}) {
   }
 }
 
-function renderHourlySurfPreview(hourly = []) {
+function renderHourlySurfPreview(hourly = [], weatherData = null) {
   if (!hourly.length) return '';
 
-  const next12Hours = hourly.slice(0, 12);
+  const next24Hours = hourly.slice(0, 24);
+  const hourlyTimes = weatherData?.hourly?.time || [];
+  const hourlyWindSpeeds = weatherData?.hourly?.windSpeed || [];
+  const hourlyWindDirs = weatherData?.hourly?.windDirection || [];
 
   return `
     <div class="surf-hourly-section">
       <div class="surf-hourly-header">
         <span class="surf-hourly-title">Prévisions Surf Heure par Heure</span>
-        <span class="surf-hourly-badge">12 h</span>
+        <span class="surf-hourly-badge">24 h</span>
       </div>
-      <div class="surf-hourly-scroll">
-        ${next12Hours
+      <div class="hourly-forecast surf-hourly-forecast" aria-label="Prévisions surf 24h">
+        ${next24Hours
           .map((item) => {
             const hourLabel = formatIsoHour(item.time);
             const height = item.waveHeight != null ? `${Number(item.waveHeight).toFixed(1)}m` : '—';
             const period = item.swellPeriod != null ? `${Math.round(item.swellPeriod)}s` : '—';
-            const dir = degreesToCardinal(item.swellDirection ?? 0);
+            const dir = degreesToCardinal(item.swellDirection ?? item.waveDirection ?? 0);
+
+            let windSpd = null;
+            let windDir = null;
+            if (hourlyTimes.length) {
+              const idx = hourlyTimes.indexOf(item.time);
+              if (idx !== -1) {
+                windSpd = hourlyWindSpeeds[idx];
+                windDir = hourlyWindDirs[idx];
+              }
+            }
+            if (windSpd == null) windSpd = weatherData?.windSpeed;
+            if (windDir == null) windDir = weatherData?.windDirection;
+
+            const windText = windSpd != null ? `${Math.round(windSpd)} km/h` : '—';
+            const windDirCard = windDir != null ? degreesToCardinal(windDir) : '';
 
             return `
-              <div class="surf-hourly-col">
-                <span class="surf-hourly-col__time">${hourLabel}</span>
-                <span class="surf-wave-icon">🌊</span>
-                <strong class="surf-hourly-col__height">${height}</strong>
-                <span class="surf-hourly-col__period">${period}</span>
-                <small class="surf-hourly-col__dir">${dir}</small>
-              </div>
+              <article class="hourly-item hourly-item--surf" data-wave="${item.waveHeight ?? 0}">
+                <span class="hourly-item__time">${hourLabel}</span>
+                <span class="hourly-item__icon" aria-hidden="true">🌊</span>
+                <strong class="hourly-item__temperature">${height}</strong>
+                <span class="hourly-item__surf-period" title="Période de houle : ${period}">${period}</span>
+                <span class="hourly-item__surf-dir" title="Direction houle : ${dir}">${dir}</span>
+                <span class="hourly-item__surf-wind" title="Vent : ${windText} ${windDirCard}">💨 ${Math.round(windSpd ?? 0)}k</span>
+              </article>
             `;
           })
           .join('')}

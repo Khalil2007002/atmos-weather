@@ -3,7 +3,7 @@ const REQUEST_TIMEOUT_MS = 12_000;
 
 const WEATHER_PARAMETERS = {
   current:
-    'temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility',
+    'temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,surface_pressure,visibility,precipitation,dew_point_2m',
 
   hourly:
     'temperature_2m,weather_code,precipitation_probability,wind_speed_10m,wind_direction_10m,relative_humidity_2m,uv_index',
@@ -157,6 +157,8 @@ function normalizeWeather(data, location) {
     isDay: Boolean(current.is_day),
 
     humidity: current.relative_humidity_2m ?? null,
+    dewPoint: current.dew_point_2m ?? null,
+    precipitation: current.precipitation ?? 0,
     windSpeed: current.wind_speed_10m ?? null,
     windDirection: current.wind_direction_10m ?? null,
     windGusts: current.wind_gusts_10m ?? null,
