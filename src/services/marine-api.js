@@ -1,4 +1,3 @@
-const MARINE_ENDPOINT = 'https://marine-api.open-meteo.com/v1/marine';
 const REQUEST_TIMEOUT_MS = 12_000;
 
 export const POPULAR_SURF_SPOTS = [
@@ -20,42 +19,19 @@ export const POPULAR_SURF_SPOTS = [
 ];
 
 export async function getMarineForecast(location, { signal } = {}) {
-  const requests = shouldUseLocalProxy()
-    ? [createLocalProxyUrl(location), createMarineUrl(location)]
-    : [createMarineUrl(location)];
-
-  let lastError;
-
-  for (const url of requests) {
-    try {
-      const data = await fetchMarineData(url, { signal });
-      return normalizeMarineData(data, location);
-    } catch (error) {
-      if (signal?.aborted) throw error;
-      lastError = error;
-    }
+  try {
+    // The browser never contacts the marine provider directly: the API enforces Premium access first.
+    const data = await fetchMarineData(createLocalProxyUrl(location), { signal });
+    if (data.isPremiumRequired) return { isPremiumRequired: true, nearestSpot: findNearestSurfSpot(location.latitude, location.longitude) };
+    return normalizeMarineData(data, location);
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return {
+      isCoastal: false,
+      nearestSpot: findNearestSurfSpot(location.latitude, location.longitude),
+      error: error.message || 'Marine request failed',
+    };
   }
-
-  // En cas d'erreur ou d'emplacement terrestre, chercher le spot le plus proche
-  const nearest = findNearestSurfSpot(location.latitude, location.longitude);
-  return {
-    isCoastal: false,
-    nearestSpot: nearest,
-    error: lastError?.message || 'Marine request failed',
-  };
-}
-
-function createMarineUrl(location) {
-  const url = new URL(MARINE_ENDPOINT);
-  url.search = new URLSearchParams({
-    latitude: String(location.latitude),
-    longitude: String(location.longitude),
-    hourly: 'wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,swell_wave_peak_period,wind_wave_height',
-    daily: 'wave_height_max,wave_direction_dominant,wave_period_max',
-    timezone: 'auto',
-    forecast_days: '7',
-  }).toString();
-  return url;
 }
 
 function createLocalProxyUrl(location) {
@@ -65,11 +41,6 @@ function createLocalProxyUrl(location) {
     longitude: String(location.longitude),
   }).toString();
   return url;
-}
-
-function shouldUseLocalProxy() {
-  if (typeof window === 'undefined') return false;
-  return ['127.0.0.1', 'localhost', '::1'].includes(window.location.hostname);
 }
 
 async function fetchMarineData(url, { signal } = {}) {

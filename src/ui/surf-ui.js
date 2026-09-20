@@ -16,6 +16,11 @@ export function renderSurfCard(marineData, weatherData, { onSelectSpot } = {}) {
     return;
   }
 
+  if (!authService.isPremium() || marineData.isPremiumRequired) {
+    renderLockedSurfCard(container);
+    return;
+  }
+
   const { isCoastal, nearestSpot, current, hourly = [] } = marineData;
   const spotName = isCoastal ? (marineData.location?.name || 'Spot Côtier') : (nearestSpot?.name || 'Spot Côtier');
   const distanceNotice = !isCoastal && nearestSpot?.distanceKm
@@ -165,6 +170,25 @@ export function renderSurfCard(marineData, weatherData, { onSelectSpot } = {}) {
       showPremiumModal();
     });
   }
+}
+
+function renderLockedSurfCard(container) {
+  container.innerHTML = `
+    <article class="surf-card glass-card surf-card--locked" role="button" tabindex="0" aria-label="Débloquer les prévisions Surf et Océan avec Atmos Premium">
+      <div class="surf-card__locked-preview" aria-hidden="true">
+        <div class="surf-card__header"><div><span class="eyebrow">Surf &amp; Océan 🌊</span><h2 class="surf-card__title">Conditions du spot</h2></div><div class="surf-card__fake-select">Sélection du spot</div></div>
+        <div class="surf-card__hero"><div class="surf-score-badge"><span class="surf-score-value">••</span><span class="surf-score-max">/ 100</span><span class="surf-score-status">Conditions</span></div>
+          <div class="surf-metrics-grid">${['Hauteur Vagues', 'Période Houle', 'Direction Houle', 'Vent sur le spot'].map((label) => `<div class="surf-metric-box"><span class="surf-metric-label">${label}</span><span class="surf-metric-value">•••</span><span class="surf-metric-sub">••••••</span></div>`).join('')}</div>
+        </div>
+        <div class="surf-advice-banner"><span class="surf-advice-icon">🏄</span><div class="surf-advice-body"><strong>Analyse Atmos Surf</strong><p>••••••••••••••••••••••••••••••••••••</p></div></div>
+        <div class="surf-hourly-section"><div class="surf-hourly-header"><span class="surf-hourly-title">Prévisions Surf Heure par Heure</span><span class="surf-hourly-badge">24 h</span></div><div class="surf-hourly-forecast">${Array.from({ length: 6 }, () => '<div class="surf-card__fake-hour">••<br>🌊<br>•••</div>').join('')}</div></div>
+      </div>
+      <div class="surf-card__premium-overlay"><span class="premium-lock-pill"><span>✦</span> Atmos Premium</span><strong>Surf &amp; Océan est réservé aux membres Premium</strong><button type="button" class="surf-upgrade-btn">Débloquer Premium</button></div>
+    </article>`;
+  const lockedCard = container.querySelector('.surf-card--locked');
+  const unlock = () => showPremiumModal();
+  lockedCard.addEventListener('click', unlock);
+  lockedCard.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); unlock(); } });
 }
 
 function renderHourlySurfPreview(hourly = [], weatherData = null) {

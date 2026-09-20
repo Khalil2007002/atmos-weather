@@ -1,4 +1,4 @@
-import { authService } from '../services/auth-service.js';
+import { authService, readResponse } from '../services/auth-service.js';
 import { getPremiumFeaturesList } from '../utils/premium-features.js';
 import { showAuthModal } from './auth-modal.js';
 
@@ -31,7 +31,10 @@ export function showPremiumModal() {
   title.innerHTML = 'Atmos Premium <span style="color: gold;">✦</span>';
   title.style.cssText = 'margin-top: 0; text-align: center; margin-bottom: 1.5rem;';
   
-  const featuresList = getPremiumFeaturesList();
+  const featuresList = [
+    { name: 'Surf & Océan complet', description: 'Score, vagues, houle, vent, conseils et prévisions horaires.' },
+    ...getPremiumFeaturesList(),
+  ];
   const featuresHtml = featuresList.map(f => `
     <li style="margin-bottom: 0.75rem; display: flex; align-items: start; gap: 0.5rem;">
       <span style="color: #667eea;">✓</span>
@@ -102,7 +105,7 @@ export function showPremiumModal() {
     }
     
     if (authService.isPremium()) {
-      msgContainer.innerHTML = '<span style="color: #667eea;">Vous êtes déjà Premium !</span>';
+      msgContainer.innerHTML = '<span style="color: #8fe3ff;">Votre compte bénéficie déjà d’Atmos Premium.</span>';
       return;
     }
     
@@ -113,26 +116,21 @@ export function showPremiumModal() {
     try {
       const res = await fetch('/api/premium/checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authService.getToken()}`
-        },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: selectedPlan })
       });
       
-      const data = await res.json();
+      const data = await readResponse(res);
       
       if (!res.ok) {
         throw new Error(data.message || data.error || 'Erreur lors du paiement');
       }
       
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        msgContainer.innerHTML = '<span style="color: #4cd137;">Paiement initialisé avec succès.</span>';
-      }
+      if (!data.url) throw new Error('Le paiement ne peut pas être initialisé pour le moment.');
+      window.location.assign(data.url);
     } catch (err) {
-      msgContainer.innerHTML = `<span style="color: #e84118;">Le paiement doit être configuré (Stripe non configuré). ${err.message}</span>`;
+      msgContainer.innerHTML = `<span style="color: #e84118;">${err.message}</span>`;
       submitBtn.disabled = false;
       submitBtn.textContent = "S'abonner maintenant";
     }
@@ -144,7 +142,12 @@ export function showPremiumModal() {
   modal.appendChild(pricingContainer);
   modal.appendChild(msgContainer);
   
-  if (!authService.isAuthenticated()) {
+  if (authService.isPremium()) {
+    const status = document.createElement('p');
+    status.style.cssText = 'text-align:center;color:#8fe3ff;margin:0 0 1rem;';
+    status.textContent = '✦ Votre compte est Premium.';
+    modal.appendChild(status);
+  } else if (!authService.isAuthenticated()) {
     const loginHint = document.createElement('p');
     loginHint.style.cssText = 'text-align: center; margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);';
     loginHint.innerHTML = 'Vous devez être connecté pour vous abonner. <a href="#" id="premium-login-link" style="color: white;">Se connecter</a>';

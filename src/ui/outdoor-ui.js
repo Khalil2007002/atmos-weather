@@ -43,10 +43,7 @@ export function renderOutdoorCard(weatherData) {
             const isLocked = !isPremium && !isFreeActivity;
             const barWidth = Math.max(10, act.score);
 
-            return `
-              <div class="activity-box ${act.status.class} ${isLocked ? 'activity-box--locked' : ''}" 
-                   data-locked="${isLocked ? 'true' : 'false'}"
-                   ${isLocked ? 'title="Fonctionnalité Premium — Cliquez pour débloquer"' : ''}>
+            const activityDetails = `
                 <div class="activity-box__top">
                   <div class="activity-box__ident">
                     <span class="activity-box__icon" aria-hidden="true">${act.icon}</span>
@@ -64,13 +61,13 @@ export function renderOutdoorCard(weatherData) {
                   <div class="activity-bar__fill" style="width: ${barWidth}%"></div>
                 </div>
 
-                <p class="activity-box__advice">${escapeHtml(act.advice)}</p>
-
-                ${isLocked ? `
-                  <div class="activity-box__lock-overlay">
-                    <span class="premium-lock-pill"><span style="color:gold;">✦</span> Atmos Premium</span>
-                  </div>
-                ` : ''}
+                <p class="activity-box__advice">${escapeHtml(act.advice)}</p>`;
+            return `
+              <div class="activity-box ${act.status.class} ${isLocked ? 'activity-box--locked' : ''}"
+                   data-locked="${isLocked ? 'true' : 'false'}"
+                   ${isLocked ? 'role="button" tabindex="0" aria-label="Débloquer cette activité avec Atmos Premium"' : ''}
+                   ${isLocked ? 'title="Fonctionnalité Premium — Cliquez pour débloquer"' : ''}>
+                ${isLocked ? `<div class="activity-box__restricted-content" aria-hidden="true">${activityDetails}</div><div class="activity-box__lock-overlay"><span class="premium-lock-pill"><span style="color:gold;">✦</span> Atmos Premium</span><span class="activity-box__unlock-label">Débloquer Premium</span></div>` : activityDetails}
               </div>
             `;
           })
@@ -84,6 +81,12 @@ export function renderOutdoorCard(weatherData) {
     grid.addEventListener('click', (e) => {
       const lockedBox = e.target.closest('.activity-box--locked');
       if (lockedBox) {
+        showPremiumModal();
+      }
+    });
+    grid.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.activity-box--locked')) {
+        e.preventDefault();
         showPremiumModal();
       }
     });

@@ -26,6 +26,7 @@ import { authService } from './services/auth-service.js';
 import { showAuthModal } from './ui/auth-modal.js';
 import { showProfileModal } from './ui/profile-modal.js';
 import { showPremiumModal } from './ui/premium-modal.js';
+import { showPrivacyModal } from './ui/privacy-modal.js';
 import { isFeatureAvailable } from './utils/premium-features.js';
 
 let activeWeatherRequest;
@@ -95,7 +96,10 @@ async function loadSurfForecast(location, weather = currentWeatherData) {
 
     const surfPill = document.querySelector('#surf-tab-pill');
     if (surfPill) {
-      if (marineData.current?.waveHeight) {
+      if (!authService.isPremium() || marineData.isPremiumRequired) {
+        surfPill.textContent = 'Premium';
+        surfPill.style.display = 'inline-block';
+      } else if (marineData.current?.waveHeight) {
         surfPill.textContent = `${marineData.current.waveHeight.toFixed(1)}m`;
         surfPill.style.display = 'inline-block';
       } else if (marineData.nearestSpot) {
@@ -315,8 +319,8 @@ function setupAuth() {
       const isPrem = authService.isPremium();
       authBtn.textContent = '';
       authBtn.innerHTML = isPrem
-        ? `<span style="color:gold;">✦</span> ${user.name || 'Profil'}`
-        : `👤 ${user.name || 'Profil'}`;
+        ? `<span style="color:gold;">✦</span> ${escapeHtml(user.name || 'Profil')}`
+        : `👤 ${escapeHtml(user.name || 'Profil')}`;
       authBtn.onclick = () => showProfileModal();
 
       if (isPrem) {
@@ -337,12 +341,15 @@ function setupAuth() {
       renderCurrentWeather(currentWeatherData);
       renderOutdoorCard(currentWeatherData);
     }
-    if (currentMarineData) {
-      renderSurfCard(currentMarineData, currentWeatherData, { onSelectSpot: handleSelectSurfSpot });
-    }
+    if (currentWeatherData) loadSurfForecast(currentLocation, currentWeatherData);
   }
 
   premiumBtn.addEventListener('click', () => showPremiumModal());
+  document.querySelector('#footer-privacy-account')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (authService.isAuthenticated()) showPrivacyModal();
+    else showAuthModal('login');
+  });
   window.addEventListener('atmos:auth-changed', updateAuthUI);
   authService.init().then(updateAuthUI);
 }
@@ -357,6 +364,15 @@ function bootstrap() {
   setupFavorites();
   document.querySelector('#refresh-button').addEventListener('click', () => loadWeather(currentLocation));
   loadWeather();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 bootstrap();

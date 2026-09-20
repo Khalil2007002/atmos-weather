@@ -1,5 +1,6 @@
 import { authService } from '../services/auth-service.js';
 import { showPremiumModal } from './premium-modal.js';
+import { showPrivacyModal } from './privacy-modal.js';
 
 export function showProfileModal() {
   const user = authService.getUser();
@@ -39,8 +40,8 @@ export function showProfileModal() {
   
   const isPremium = authService.isPremium();
   info.innerHTML = `
-    <p style="margin: 0 0 0.5rem 0;"><strong>Nom:</strong> ${user.name || 'Utilisateur'}</p>
-    <p style="margin: 0 0 0.5rem 0;"><strong>Email:</strong> ${user.email}</p>
+    <p style="margin: 0 0 0.5rem 0;"><strong>Nom:</strong> ${escapeHtml(user.name || 'Utilisateur')}</p>
+    <p style="margin: 0 0 0.5rem 0;"><strong>Email:</strong> ${escapeHtml(user.email)}</p>
     <p style="margin: 0;"><strong>Statut:</strong> ${isPremium ? '<span style="color: gold;">Premium ✦</span>' : 'Gratuit'}</p>
   `;
   
@@ -75,6 +76,15 @@ export function showProfileModal() {
     };
     content.appendChild(upgradeBtn);
   }
+
+  const privacyBtn = document.createElement('button');
+  privacyBtn.textContent = 'Privacy & Account';
+  privacyBtn.style.cssText = btnStyle;
+  privacyBtn.onclick = () => {
+    overlay.remove();
+    showPrivacyModal();
+  };
+  content.appendChild(privacyBtn);
   
   content.appendChild(logoutBtn);
   
@@ -87,4 +97,13 @@ export function showProfileModal() {
   });
   
   document.body.appendChild(overlay);
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
