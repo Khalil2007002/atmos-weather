@@ -10,6 +10,7 @@
     "check": "node --check src/main.js && node --check src/services/auth-service.js && node --check src/services/weather-api.js && node --check src/services/marine-api.js && node --check src/utils/outdoor-analyzer.js && node --check src/ui/auth-modal.js && node --check src/ui/privacy-modal.js && node --check src/ui/premium-modal.js && node --check src/ui/surf-ui.js && node --check src/ui/outdoor-ui.js && node --check api/[...path].js && node --check api/_lib/database.js && node --check api/_lib/security.js && node --check server.mjs"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^1.1.0"
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/analytics": "^2.0.1"
   }
 }

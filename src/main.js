@@ -1,3 +1,4 @@
+import { inject } from '@vercel/analytics';
 import { APP_CONFIG } from './config.js';
 import { reverseGeocode, searchLocations } from './services/geocoding-api.js';
 import { getCurrentWeather } from './services/weather-api.js';
@@ -28,6 +29,9 @@ import { showProfileModal } from './ui/profile-modal.js';
 import { showPremiumModal } from './ui/premium-modal.js';
 import { showPrivacyModal } from './ui/privacy-modal.js';
 import { isFeatureAvailable } from './utils/premium-features.js';
+
+// Initialize Vercel Web Analytics
+inject();
 
 let activeWeatherRequest;
 let activeMarineRequest;
