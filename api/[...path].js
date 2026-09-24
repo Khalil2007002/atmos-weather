@@ -58,9 +58,17 @@ export default async function handler(request, response) {
   if (request.method === 'OPTIONS') return sendEmpty(response, 204);
 
   try {
-    validateSecurityConfiguration();
     const url = new URL(request.url || '/', requestOrigin(request) || 'http://localhost');
     const path = url.pathname;
+
+    // Routes publiques indépendantes des comptes
+    if (path === '/api/weather' && request.method === 'GET') return proxyWeather(url, response);
+    if (path === '/api/marine' && request.method === 'GET') return proxyMarine(request, url, response);
+    if (path === '/api/geocoding' && request.method === 'GET') return proxyGeocoding(url, response);
+    if (path === '/api/reverse-geocode' && request.method === 'GET') return proxyReverseGeocoding(url, request, response);
+
+    // Routes d'authentification, compte et paiement nécessitant la configuration de sécurité
+    validateSecurityConfiguration();
 
     if (path === '/api/auth/register' && request.method === 'POST') return register(request, response);
     if (path === '/api/auth/login' && request.method === 'POST') return login(request, response);
@@ -77,11 +85,6 @@ export default async function handler(request, response) {
     if (path === '/api/account/export' && request.method === 'GET') return exportAccount(request, response);
     if (path === '/api/account' && request.method === 'PATCH') return updateAccount(request, response);
     if (path === '/api/account' && request.method === 'DELETE') return removeAccount(request, response);
-
-    if (path === '/api/weather' && request.method === 'GET') return proxyWeather(url, response);
-    if (path === '/api/marine' && request.method === 'GET') return proxyMarine(request, url, response);
-    if (path === '/api/geocoding' && request.method === 'GET') return proxyGeocoding(url, response);
-    if (path === '/api/reverse-geocode' && request.method === 'GET') return proxyReverseGeocoding(url, request, response);
 
     return sendJson(response, 404, { error: 'Route API introuvable.' });
   } catch (error) {
@@ -158,7 +161,9 @@ async function requestPasswordReset(request, response) {
   const email = normalizeEmail(body.email);
   const genericResponse = { message: 'Si un compte correspond à cette adresse, vous recevrez un code dans quelques instants.' };
   if (!isEmail(email)) return sendJson(response, 400, { error: 'Veuillez saisir une adresse email valide.' });
-  if (!isEmailConfigured()) return sendJson(response, 503, { error: 'Le service de récupération est temporairement indisponible.', code: 'EMAIL_NOT_CONFIGURED' });
+  if (!isEmailConfigured() && (process.env.NODE_ENV === 'production' || Boolean(process.env.VERCEL))) {
+    return sendJson(response, 503, { error: 'Le service de récupération est temporairement indisponible.', code: 'EMAIL_NOT_CONFIGURED' });
+  }
   if (!await consumeRateLimit(`reset-ip:${requestIp(request)}`, 8, 60 * 60) || !await consumeRateLimit(`reset-email:${email}`, 4, 60 * 60)) {
     return sendJson(response, 429, { error: 'Trop de demandes. Réessayez plus tard.' });
   }
@@ -179,13 +184,21 @@ async function requestPasswordReset(request, response) {
     attempts: 0, lastSentAt: now.toISOString(), createdAt: now.toISOString(),
   };
   await replaceResetCode(reset);
-  try {
-    await sendPasswordResetEmail({ to: email, code });
-  } catch (error) {
-    await deleteResetCode(reset.id);
-    // Return the same generic response as for an unknown email: delivery failures must not reveal account existence.
-    console.error('[Atmos Email]', error);
+
+  if (isEmailConfigured()) {
+    try {
+      await sendPasswordResetEmail({ to: email, code });
+    } catch (error) {
+      await deleteResetCode(reset.id);
+      console.error('[Atmos Email]', error);
+    }
+  } else {
+    // Mode développement local uniquement
+    console.log(`\n========================================`);
+    console.log(`[Atmos Dev Reset Code] Code pour ${email}: ${code}`);
+    console.log(`========================================\n`);
   }
+
   return sendJson(response, 200, { ...genericResponse, resendAvailableAt: new Date(now.getTime() + RESET_RESEND_DELAY_MS).toISOString() });
 }
 
@@ -389,7 +402,12 @@ async function proxyMarine(request, url, response) {
   const latitude = Number(url.searchParams.get('latitude'));
   const longitude = Number(url.searchParams.get('longitude'));
   if (!validCoordinates(latitude, longitude)) return sendJson(response, 400, { error: 'Coordonnées marines invalides.' });
-  const user = await currentUser(request);
+  let user = null;
+  try {
+    user = await currentUser(request);
+  } catch {
+    user = null;
+  }
   if (user?.tier !== 'premium') {
     return sendJson(response, 200, {
       isPremiumRequired: true,

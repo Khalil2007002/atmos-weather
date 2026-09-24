@@ -4,6 +4,14 @@ import { extname, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import apiHandler from './api/[...path].js';
 
+if (existsSync('.env')) {
+  try {
+    process.loadEnvFile('.env');
+  } catch {
+    // Ignore if not formatted or already loaded
+  }
+}
+
 const rootDirectory = fileURLToPath(new URL(process.argv.includes('--dist') ? './dist/' : './', import.meta.url));
 const port = Number(process.env.PORT || 4173);
 const mimeTypes = {
