@@ -21,7 +21,8 @@ class AuthService {
   }
 
   isAuthenticated() { return Boolean(this.user); }
-  isPremium() { return this.user?.tier === 'premium'; }
+  isPremium() { return this.user?.tier === 'premium' || Boolean(this.user?.isAdmin); }
+  isAdmin() { return Boolean(this.user?.isAdmin); }
   getUser() { return this.user; }
 
   async login(email, password) {

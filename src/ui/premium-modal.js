@@ -142,7 +142,12 @@ export function showPremiumModal() {
   modal.appendChild(pricingContainer);
   modal.appendChild(msgContainer);
   
-  if (authService.isPremium()) {
+  if (authService.isAdmin && authService.isAdmin()) {
+    const adminStatus = document.createElement('p');
+    adminStatus.style.cssText = 'text-align:center;margin:0 0 1rem;';
+    adminStatus.innerHTML = '<span style="display:inline-block;background:linear-gradient(135deg,#e040fb,#7c4dff);color:white;font-size:0.85rem;font-weight:700;padding:0.4rem 1rem;border-radius:20px;">⚙ ADMIN — Accès Premium inclus</span>';
+    modal.appendChild(adminStatus);
+  } else if (authService.isPremium()) {
     const status = document.createElement('p');
     status.style.cssText = 'text-align:center;color:#8fe3ff;margin:0 0 1rem;';
     status.textContent = '✦ Votre compte est Premium.';

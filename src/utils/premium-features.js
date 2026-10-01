@@ -12,10 +12,11 @@ export const PREMIUM_FEATURES = {
   themes: { name: 'Thèmes', free: true },
 };
 
-export function isFeatureAvailable(featureName, userTier = 'Free') {
+export function isFeatureAvailable(featureName, userTier = 'Free', isAdmin = false) {
   const feature = PREMIUM_FEATURES[featureName];
   if (!feature) return false;
   if (feature.free) return true;
+  if (isAdmin) return true;
   return userTier === 'premium';
 }
 

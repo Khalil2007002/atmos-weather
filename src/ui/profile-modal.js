@@ -39,10 +39,12 @@ export function showProfileModal() {
   info.style.cssText = 'background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;';
   
   const isPremium = authService.isPremium();
+  const isAdmin = authService.isAdmin();
   info.innerHTML = `
     <p style="margin: 0 0 0.5rem 0;"><strong>Nom:</strong> ${escapeHtml(user.name || 'Utilisateur')}</p>
     <p style="margin: 0 0 0.5rem 0;"><strong>Email:</strong> ${escapeHtml(user.email)}</p>
-    <p style="margin: 0;"><strong>Statut:</strong> ${isPremium ? '<span style="color: gold;">Premium ✦</span>' : 'Gratuit'}</p>
+    <p style="margin: 0${isAdmin ? ' 0 0.5rem 0' : ''};"><strong>Statut:</strong> ${isPremium && !isAdmin ? '<span style="color: gold;">Premium ✦</span>' : isAdmin ? '<span style="color: gold;">Premium ✦</span>' : 'Gratuit'}</p>
+    ${isAdmin ? '<p style="margin: 0;"><span style="display:inline-block;background:linear-gradient(135deg,#e040fb,#7c4dff);color:white;font-size:0.75rem;font-weight:700;padding:0.2rem 0.6rem;border-radius:20px;letter-spacing:0.05em;">⚙ ADMIN</span></p>' : ''}
   `;
   
   const btnStyle = `
@@ -66,7 +68,7 @@ export function showProfileModal() {
   content.appendChild(title);
   content.appendChild(info);
   
-  if (!isPremium) {
+  if (!isPremium && !isAdmin) {
     const upgradeBtn = document.createElement('button');
     upgradeBtn.textContent = 'Passer à Premium ✦';
     upgradeBtn.style.cssText = btnStyle;
