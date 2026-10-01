@@ -59,7 +59,10 @@ export default async function handler(request, response) {
 
   try {
     const url = new URL(request.url || '/', requestOrigin(request) || 'http://localhost');
-    const path = url.pathname;
+    const matchedPath = request.headers['x-matched-path'] || request.headers['x-invoke-path'];
+    const path = (typeof matchedPath === 'string' && matchedPath.startsWith('/api'))
+      ? new URL(matchedPath, 'http://localhost').pathname
+      : url.pathname;
 
     // Routes publiques indépendantes des comptes
     if (path === '/api/weather' && request.method === 'GET') return proxyWeather(url, response);

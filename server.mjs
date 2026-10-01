@@ -2,7 +2,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import apiHandler from './api/[...path].js';
+import apiHandler from './api/index.js';
 
 if (existsSync('.env')) {
   try {
