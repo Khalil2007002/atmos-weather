@@ -65,38 +65,41 @@ export default async function handler(request, response) {
       : url.pathname;
 
     // Routes publiques indépendantes des comptes
-    if (path === '/api/weather' && request.method === 'GET') return proxyWeather(url, response);
-    if (path === '/api/marine' && request.method === 'GET') return proxyMarine(request, url, response);
-    if (path === '/api/geocoding' && request.method === 'GET') return proxyGeocoding(url, response);
-    if (path === '/api/reverse-geocode' && request.method === 'GET') return proxyReverseGeocoding(url, request, response);
+    if (path === '/api/weather' && request.method === 'GET') return await proxyWeather(url, response);
+    if (path === '/api/marine' && request.method === 'GET') return await proxyMarine(request, url, response);
+    if (path === '/api/geocoding' && request.method === 'GET') return await proxyGeocoding(url, response);
+    if (path === '/api/reverse-geocode' && request.method === 'GET') return await proxyReverseGeocoding(url, request, response);
 
     // Routes d'authentification, compte et paiement nécessitant la configuration de sécurité
     validateSecurityConfiguration();
 
-    if (path === '/api/auth/register' && request.method === 'POST') return register(request, response);
-    if (path === '/api/auth/login' && request.method === 'POST') return login(request, response);
-    if (path === '/api/auth/me' && request.method === 'GET') return me(request, response);
-    if (path === '/api/auth/logout' && request.method === 'POST') return logout(request, response);
-    if (path === '/api/auth/password-reset/request' && request.method === 'POST') return requestPasswordReset(request, response);
-    if (path === '/api/auth/password-reset/verify' && request.method === 'POST') return verifyPasswordReset(request, response);
-    if (path === '/api/auth/password-reset/confirm' && request.method === 'POST') return confirmPasswordReset(request, response);
+    if (path === '/api/auth/register' && request.method === 'POST') return await register(request, response);
+    if (path === '/api/auth/login' && request.method === 'POST') return await login(request, response);
+    if (path === '/api/auth/me' && request.method === 'GET') return await me(request, response);
+    if (path === '/api/auth/logout' && request.method === 'POST') return await logout(request, response);
+    if (path === '/api/auth/password-reset/request' && request.method === 'POST') return await requestPasswordReset(request, response);
+    if (path === '/api/auth/password-reset/verify' && request.method === 'POST') return await verifyPasswordReset(request, response);
+    if (path === '/api/auth/password-reset/confirm' && request.method === 'POST') return await confirmPasswordReset(request, response);
 
-    if (path === '/api/premium/checkout' && request.method === 'POST') return createCheckout(request, response);
-    if (path === '/api/premium/webhook' && request.method === 'POST') return stripeWebhook(request, response);
-    if (path === '/api/premium/cancel' && request.method === 'POST') return cancelSubscription(request, response);
+    if (path === '/api/premium/checkout' && request.method === 'POST') return await createCheckout(request, response);
+    if (path === '/api/premium/webhook' && request.method === 'POST') return await stripeWebhook(request, response);
+    if (path === '/api/premium/cancel' && request.method === 'POST') return await cancelSubscription(request, response);
 
-    if (path === '/api/account/export' && request.method === 'GET') return exportAccount(request, response);
-    if (path === '/api/account' && request.method === 'PATCH') return updateAccount(request, response);
-    if (path === '/api/account' && request.method === 'DELETE') return removeAccount(request, response);
+    if (path === '/api/account/export' && request.method === 'GET') return await exportAccount(request, response);
+    if (path === '/api/account' && request.method === 'PATCH') return await updateAccount(request, response);
+    if (path === '/api/account' && request.method === 'DELETE') return await removeAccount(request, response);
 
     return sendJson(response, 404, { error: 'Route API introuvable.' });
   } catch (error) {
     if (error instanceof DatabaseConfigurationError || error instanceof SecurityConfigurationError) {
       return sendJson(response, 503, { error: 'Le service de compte est temporairement indisponible.', code: 'SERVICE_NOT_CONFIGURED' });
     }
+    if (error?.name === 'EmailConfigurationError') {
+      return sendJson(response, 503, { error: 'Le service email n’est pas configuré.', code: 'EMAIL_NOT_CONFIGURED' });
+    }
     if (error?.message === 'INVALID_JSON') return sendJson(response, 400, { error: 'La requête doit contenir un JSON valide.' });
     if (error?.message === 'BODY_TOO_LARGE') return sendJson(response, 413, { error: 'La requête est trop volumineuse.' });
-    console.error('[Atmos API]', error);
+    console.error('[Atmos API Error]', error);
     return sendJson(response, 500, { error: 'Une erreur serveur est survenue. Réessayez dans quelques instants.' });
   }
 }
@@ -255,7 +258,7 @@ async function createCheckout(request, response) {
   if (!requireSameOrigin(request, response)) return;
   const user = await requireUser(request, response);
   if (!user) return;
-  if (user.tier === 'premium') return sendJson(response, 400, { error: 'Votre compte Atmos est déjà Premium.' });
+  if (user.tier === 'premium' || user.role === 'admin' || user.isAdmin) return sendJson(response, 400, { error: 'Votre compte bénéficie déjà d’un accès Premium.' });
   const body = await readJson(request);
   const priceId = body.plan === 'annual' ? process.env.STRIPE_YEARLY_PRICE_ID : body.plan === 'monthly' ? process.env.STRIPE_MONTHLY_PRICE_ID : '';
   if (!process.env.STRIPE_SECRET_KEY || !priceId) {
@@ -411,7 +414,8 @@ async function proxyMarine(request, url, response) {
   } catch {
     user = null;
   }
-  if (user?.tier !== 'premium') {
+  const hasPremium = user?.tier === 'premium' || user?.role === 'admin' || Boolean(user?.isAdmin);
+  if (!hasPremium) {
     return sendJson(response, 200, {
       isPremiumRequired: true,
       message: 'Les prévisions détaillées de surf sont réservées aux membres Atmos Premium.',
@@ -484,9 +488,15 @@ async function requireUser(request, response) {
 
 function publicUser(user) {
   return {
-    id: user.id, email: user.email, name: user.name, tier: user.tier,
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role || (user.isAdmin ? 'admin' : 'user'),
+    isAdmin: Boolean(user.isAdmin || user.role === 'admin'),
+    tier: user.tier,
     subscription: user.subscriptionStatus ? {
-      status: user.subscriptionStatus, currentPeriodEnd: user.subscription_current_period_end ?? user.subscriptionCurrentPeriodEnd ?? null,
+      status: user.subscriptionStatus,
+      currentPeriodEnd: user.subscription_current_period_end ?? user.subscriptionCurrentPeriodEnd ?? null,
       cancelAtPeriodEnd: user.cancelAtPeriodEnd,
     } : null,
     createdAt: user.created_at ?? user.createdAt,

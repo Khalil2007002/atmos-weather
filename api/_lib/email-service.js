@@ -8,13 +8,14 @@ export class EmailConfigurationError extends Error {
 }
 
 export function isEmailConfigured() {
-  return Boolean(process.env.EMAIL_PROVIDER_API_KEY && process.env.EMAIL_FROM && process.env.EMAIL_FROM_NAME);
+  return Boolean(process.env.EMAIL_PROVIDER_API_KEY && process.env.EMAIL_FROM);
 }
 
 export async function sendPasswordResetEmail({ to, code }) {
   if (!isEmailConfigured()) throw new EmailConfigurationError();
 
-  const sender = `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM}>`;
+  const fromName = process.env.EMAIL_FROM_NAME || 'Atmos Weather';
+  const sender = `${fromName} <${process.env.EMAIL_FROM}>`;
   const response = await fetch(resendEndpoint, {
     method: 'POST',
     headers: {

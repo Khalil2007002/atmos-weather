@@ -7,7 +7,8 @@ const localDataFile = fileURLToPath(new URL('../../data/users.json', import.meta
 const databaseUrl = process.env.DATABASE_URL || '';
 const isVercel = Boolean(process.env.VERCEL);
 let schemaPromise;
-let sql;
+let neonInstance;
+let cachedDatabaseUrl = '';
 
 export class DatabaseConfigurationError extends Error {
   constructor(message = 'La base de données n’est pas configurée.') {
@@ -16,18 +17,26 @@ export class DatabaseConfigurationError extends Error {
   }
 }
 
+function getDatabaseUrl() {
+  return process.env.DATABASE_URL || '';
+}
+
 function useRemoteDatabase() {
-  return Boolean(databaseUrl);
+  return Boolean(getDatabaseUrl());
 }
 
 function getSql() {
-  if (!databaseUrl) {
+  const url = getDatabaseUrl();
+  if (!url) {
     throw new DatabaseConfigurationError(
       'La base de données n’est pas configurée. Ajoutez DATABASE_URL dans les variables d’environnement.',
     );
   }
-  if (!sql) sql = neon(databaseUrl);
-  return sql;
+  if (!neonInstance || cachedDatabaseUrl !== url) {
+    neonInstance = neon(url);
+    cachedDatabaseUrl = url;
+  }
+  return (text, params = []) => neonInstance.query(text, params);
 }
 
 function readLocalState() {
@@ -53,9 +62,16 @@ function writeLocalState(state) {
 
 function normalizeUser(user) {
   if (!user) return null;
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const userEmail = (user.email || '').trim().toLowerCase();
+  const isAdmin = user.role === 'admin' || (Boolean(adminEmail) && userEmail === adminEmail);
+  const role = isAdmin ? 'admin' : (user.role || 'user');
+  const isPremium = user.tier === 'premium' || isAdmin || premiumStatuses.has(user.subscription_status ?? user.subscriptionStatus);
   return {
     ...user,
-    tier: user.tier === 'premium' || premiumStatuses.has(user.subscription_status ?? user.subscriptionStatus) ? 'premium' : 'free',
+    role,
+    isAdmin,
+    tier: isPremium ? 'premium' : 'free',
     subscriptionStatus: user.subscription_status ?? user.subscriptionStatus ?? null,
     stripeCustomerId: user.stripe_customer_id ?? user.stripeCustomerId ?? null,
     stripeSubscriptionId: user.stripe_subscription_id ?? user.stripeSubscriptionId ?? null,
@@ -86,6 +102,7 @@ export async function ensureDatabase() {
         name TEXT NOT NULL,
         password_hash TEXT NOT NULL,
         password_salt TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
         tier TEXT NOT NULL DEFAULT 'free',
         stripe_customer_id TEXT UNIQUE,
         stripe_subscription_id TEXT UNIQUE,
@@ -97,6 +114,11 @@ export async function ensureDatabase() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )`);
+      try {
+        await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'`);
+      } catch {
+        // Ignorer si la colonne existe déjà
+      }
       await query(`CREATE TABLE IF NOT EXISTS sessions (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -154,10 +176,14 @@ export async function getUserBySubscriptionId(subscriptionId) {
 
 export async function createUser(user) {
   await ensureDatabase();
+  const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+  const email = String(user.email).trim().toLowerCase();
+  const initialRole = (adminEmail && email === adminEmail) || user.role === 'admin' ? 'admin' : 'user';
   const record = {
     ...user,
-    email: String(user.email).trim().toLowerCase(),
-    tier: 'free',
+    email,
+    role: initialRole,
+    tier: initialRole === 'admin' ? 'premium' : 'free',
     subscriptionStatus: null,
     stripeCustomerId: null,
     stripeSubscriptionId: null,
@@ -170,9 +196,9 @@ export async function createUser(user) {
     return normalizeUser(record);
   }
   const rows = await getSql()(`INSERT INTO users (
-      id, email, name, password_hash, password_salt, tier, terms_version, terms_accepted_at, created_at, updated_at
-    ) VALUES ($1,$2,$3,$4,$5,'free',$6,$7,$8,$8) RETURNING *`, [
-    record.id, record.email, record.name, record.passwordHash, record.passwordSalt,
+      id, email, name, password_hash, password_salt, role, tier, terms_version, terms_accepted_at, created_at, updated_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,'free',$7,$8,$9,$9) RETURNING *`, [
+    record.id, record.email, record.name, record.passwordHash, record.passwordSalt, initialRole,
     record.termsVersion, record.termsAcceptedAt, record.createdAt,
   ]);
   return normalizeUser(rows[0]);
