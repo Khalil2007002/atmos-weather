@@ -14,6 +14,7 @@ import {
   getUserById,
   getUserBySessionHash,
   getUserBySubscriptionId,
+  getUserByCustomerId,
   markResetUsed,
   recordResetAttempt,
   replaceResetCode,
@@ -258,9 +259,17 @@ async function createCheckout(request, response) {
   if (!requireSameOrigin(request, response)) return;
   const user = await requireUser(request, response);
   if (!user) return;
-  if (user.tier === 'premium' || user.role === 'admin' || user.isAdmin) return sendJson(response, 400, { error: 'Votre compte bénéficie déjà d’un accès Premium.' });
+  if (user.tier === 'premium' || user.role === 'admin' || user.isAdmin) {
+    return sendJson(response, 400, { error: 'Votre compte bénéficie déjà d’un accès Premium.' });
+  }
   const body = await readJson(request);
-  const priceId = body.plan === 'annual' ? process.env.STRIPE_YEARLY_PRICE_ID : body.plan === 'monthly' ? process.env.STRIPE_MONTHLY_PRICE_ID : '';
+  const plan = String(body.plan || '').toLowerCase();
+  const isAnnual = plan === 'annual' || plan === 'yearly';
+  const isMonthly = plan === 'monthly';
+  if (!isAnnual && !isMonthly) {
+    return sendJson(response, 400, { error: 'Plan d’abonnement invalide (mensuel ou annuel attendu).' });
+  }
+  const priceId = isAnnual ? process.env.STRIPE_YEARLY_PRICE_ID : process.env.STRIPE_MONTHLY_PRICE_ID;
   if (!process.env.STRIPE_SECRET_KEY || !priceId) {
     return sendJson(response, 503, { error: 'Les abonnements sont momentanément indisponibles. Réessayez plus tard.', code: 'PAYMENT_NOT_CONFIGURED' });
   }
@@ -268,7 +277,7 @@ async function createCheckout(request, response) {
   if (!origin) return sendJson(response, 400, { error: 'Impossible de préparer le paiement pour cette adresse.' });
   const form = new URLSearchParams({
     mode: 'subscription',
-    success_url: `${origin}/?checkout=success`,
+    success_url: `${origin}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/?checkout=cancelled`,
     client_reference_id: user.id,
     'line_items[0][price]': priceId,
@@ -279,7 +288,16 @@ async function createCheckout(request, response) {
   });
   if (user.stripeCustomerId) form.set('customer', user.stripeCustomerId);
   else form.set('customer_email', user.email);
-  const stripeResponse = await stripeRequest('/v1/checkout/sessions', { method: 'POST', body: form });
+
+  let stripeResponse = await stripeRequest('/v1/checkout/sessions', { method: 'POST', body: form });
+  if (!stripeResponse.ok && user.stripeCustomerId) {
+    const errorText = await stripeResponse.clone().text();
+    if (errorText.includes('No such customer')) {
+      form.delete('customer');
+      form.set('customer_email', user.email);
+      stripeResponse = await stripeRequest('/v1/checkout/sessions', { method: 'POST', body: form });
+    }
+  }
   if (!stripeResponse.ok) {
     console.error('[Atmos Stripe]', await stripeResponse.text());
     return sendJson(response, 502, { error: 'Le paiement ne peut pas être initialisé pour le moment.' });
@@ -298,28 +316,106 @@ async function stripeWebhook(request, response) {
   let event;
   try { event = JSON.parse(rawBody.toString('utf8')); } catch { return sendJson(response, 400, { error: 'Webhook invalide.' }); }
   const object = event.data?.object || {};
-  if (event.type === 'checkout.session.completed') {
-    const userId = object.client_reference_id || object.metadata?.userId;
-    if (userId) {
-      await setSubscriptionForUser(userId, {
-        customerId: stringOrNull(object.customer), subscriptionId: stringOrNull(object.subscription), status: 'active',
-        currentPeriodEnd: null, cancelAtPeriodEnd: false,
-      });
+
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const userId = object.client_reference_id || object.metadata?.userId;
+        const customerId = stringOrNull(object.customer);
+        const subscriptionId = stringOrNull(object.subscription);
+        const resolvedUser = userId ? await getUserById(userId) : (customerId ? await getUserByCustomerId(customerId) : null);
+        if (resolvedUser) {
+          await setSubscriptionForUser(resolvedUser.id, {
+            customerId,
+            subscriptionId,
+            status: 'active',
+          });
+        }
+        break;
+      }
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const subscriptionId = object.id;
+        const customerId = stringOrNull(object.customer);
+        let user = await getUserBySubscriptionId(subscriptionId);
+        if (!user && customerId) user = await getUserByCustomerId(customerId);
+        const userId = user?.id || object.metadata?.userId;
+        if (userId) {
+          const currentPeriodEnd = object.current_period_end
+            ? new Date(object.current_period_end * 1000).toISOString()
+            : null;
+          await setSubscriptionForUser(userId, {
+            customerId,
+            subscriptionId,
+            status: object.status,
+            currentPeriodEnd,
+            cancelAtPeriodEnd: Boolean(object.cancel_at_period_end),
+          });
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscriptionId = object.id;
+        const customerId = stringOrNull(object.customer);
+        let user = await getUserBySubscriptionId(subscriptionId);
+        if (!user && customerId) user = await getUserByCustomerId(customerId);
+        const userId = user?.id || object.metadata?.userId;
+        if (userId) {
+          await setSubscriptionForUser(userId, {
+            customerId,
+            subscriptionId,
+            status: 'canceled',
+            cancelAtPeriodEnd: false,
+          });
+        }
+        break;
+      }
+
+      case 'invoice.paid':
+      case 'invoice.payment_succeeded': {
+        const subscriptionId = stringOrNull(object.subscription);
+        const customerId = stringOrNull(object.customer);
+        if (subscriptionId || customerId) {
+          let user = subscriptionId ? await getUserBySubscriptionId(subscriptionId) : null;
+          if (!user && customerId) user = await getUserByCustomerId(customerId);
+          if (user) {
+            const periodEnd = object.lines?.data?.[0]?.period?.end;
+            const currentPeriodEnd = periodEnd ? new Date(periodEnd * 1000).toISOString() : null;
+            await setSubscriptionForUser(user.id, {
+              customerId,
+              subscriptionId: subscriptionId || user.stripeSubscriptionId,
+              status: 'active',
+              currentPeriodEnd,
+            });
+          }
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const subscriptionId = stringOrNull(object.subscription);
+        const customerId = stringOrNull(object.customer);
+        if (subscriptionId || customerId) {
+          let user = subscriptionId ? await getUserBySubscriptionId(subscriptionId) : null;
+          if (!user && customerId) user = await getUserByCustomerId(customerId);
+          if (user) {
+            await setSubscriptionForUser(user.id, {
+              customerId,
+              subscriptionId: subscriptionId || user.stripeSubscriptionId,
+              status: 'past_due',
+            });
+          }
+        }
+        break;
+      }
     }
-  } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
-    const user = await getUserBySubscriptionId(object.id);
-    const userId = user?.id || object.metadata?.userId;
-    if (userId) {
-      await setSubscriptionForUser(userId, {
-        customerId: stringOrNull(object.customer), subscriptionId: object.id, status: object.status,
-        currentPeriodEnd: object.current_period_end ? new Date(object.current_period_end * 1000).toISOString() : null,
-        cancelAtPeriodEnd: Boolean(object.cancel_at_period_end),
-      });
-    }
-  } else if (event.type === 'invoice.paid' && object.subscription) {
-    const user = await getUserBySubscriptionId(object.subscription);
-    if (user) await setSubscriptionForUser(user.id, { subscriptionId: object.subscription, status: 'active' });
+  } catch (err) {
+    console.error('[Stripe Webhook Error]', err);
+    return sendJson(response, 500, { error: 'Erreur lors du traitement du webhook.' });
   }
+
   return sendJson(response, 200, { received: true });
 }
 
@@ -534,6 +630,9 @@ async function readJson(request) {
 }
 
 async function readRawBody(request, maximumBytes) {
+  if (Buffer.isBuffer(request.body)) return request.body;
+  if (typeof request.body === 'string') return Buffer.from(request.body, 'utf8');
+  if (request.body && typeof request.body === 'object') return Buffer.from(JSON.stringify(request.body), 'utf8');
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -560,11 +659,14 @@ async function stripeRequest(path, { method, body }) {
 }
 
 function isValidStripeSignature(rawBody, signatureHeader, secret) {
-  if (typeof signatureHeader !== 'string') return false;
+  if (typeof signatureHeader !== 'string' || !rawBody) return false;
   const values = Object.fromEntries(signatureHeader.split(',').map((part) => part.split('=')));
   const timestamp = values.t;
   const signatures = signatureHeader.split(',').filter((part) => part.startsWith('v1=')).map((part) => part.slice(3));
   if (!timestamp || !signatures.length || Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false;
-  const expected = createHmac('sha256', secret).update(`${timestamp}.${rawBody.toString('utf8')}`).digest('hex');
+  const payload = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody), 'utf8');
+  const expected = createHmac('sha256', secret)
+    .update(Buffer.concat([Buffer.from(`${timestamp}.`, 'utf8'), payload]))
+    .digest('hex');
   return signatures.some((signature) => safeEqual(signature, expected));
 }

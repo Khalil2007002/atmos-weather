@@ -166,11 +166,22 @@ export async function getUserById(id) {
 }
 
 export async function getUserBySubscriptionId(subscriptionId) {
+  if (!subscriptionId) return null;
   await ensureDatabase();
   if (!useRemoteDatabase()) {
     return normalizeUser(readLocalState().users.find((user) => user.stripeSubscriptionId === subscriptionId));
   }
   const rows = await getSql()('SELECT * FROM users WHERE stripe_subscription_id = $1 LIMIT 1', [subscriptionId]);
+  return normalizeUser(rows[0]);
+}
+
+export async function getUserByCustomerId(customerId) {
+  if (!customerId) return null;
+  await ensureDatabase();
+  if (!useRemoteDatabase()) {
+    return normalizeUser(readLocalState().users.find((user) => user.stripeCustomerId === customerId));
+  }
+  const rows = await getSql()('SELECT * FROM users WHERE stripe_customer_id = $1 LIMIT 1', [customerId]);
   return normalizeUser(rows[0]);
 }
 
@@ -432,28 +443,33 @@ export async function setSubscriptionForUser(userId, subscription) {
   await ensureDatabase();
   const status = subscription.status || 'active';
   const tier = premiumStatuses.has(status) ? 'premium' : 'free';
+  const cancelAtPeriodEnd = subscription.cancelAtPeriodEnd !== undefined ? Boolean(subscription.cancelAtPeriodEnd) : null;
+  const currentPeriodEnd = subscription.currentPeriodEnd || null;
   if (!useRemoteDatabase()) {
     const state = readLocalState();
     const user = state.users.find((item) => item.id === userId);
     if (user) {
       user.tier = tier;
       user.subscriptionStatus = status;
-      user.stripeCustomerId = subscription.customerId || user.stripeCustomerId || null;
-      user.stripeSubscriptionId = subscription.subscriptionId || user.stripeSubscriptionId || null;
-      user.cancelAtPeriodEnd = Boolean(subscription.cancelAtPeriodEnd);
-      user.subscriptionCurrentPeriodEnd = subscription.currentPeriodEnd || null;
+      if (subscription.customerId) user.stripeCustomerId = subscription.customerId;
+      if (subscription.subscriptionId) user.stripeSubscriptionId = subscription.subscriptionId;
+      if (cancelAtPeriodEnd !== null) user.cancelAtPeriodEnd = cancelAtPeriodEnd;
+      if (currentPeriodEnd) user.subscriptionCurrentPeriodEnd = currentPeriodEnd;
       user.updatedAt = new Date().toISOString();
       writeLocalState(state);
     }
     return;
   }
   await getSql()(`UPDATE users SET
-      tier = $2, subscription_status = $3, stripe_customer_id = COALESCE($4, stripe_customer_id),
+      tier = $2, subscription_status = $3,
+      stripe_customer_id = COALESCE($4, stripe_customer_id),
       stripe_subscription_id = COALESCE($5, stripe_subscription_id),
-      cancel_at_period_end = $6, subscription_current_period_end = $7, updated_at = NOW()
+      cancel_at_period_end = COALESCE($6, cancel_at_period_end),
+      subscription_current_period_end = COALESCE($7, subscription_current_period_end),
+      updated_at = NOW()
     WHERE id = $1`, [
     userId, tier, status, subscription.customerId || null, subscription.subscriptionId || null,
-    Boolean(subscription.cancelAtPeriodEnd), subscription.currentPeriodEnd || null,
+    cancelAtPeriodEnd, currentPeriodEnd,
   ]);
 }
 

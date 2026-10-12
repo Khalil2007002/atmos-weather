@@ -354,10 +354,45 @@ function setupAuth() {
   authService.init().then(updateAuthUI);
 }
 
+function handleCheckoutFeedback() {
+  try {
+    const url = new URL(window.location.href);
+    const checkout = url.searchParams.get('checkout');
+    if (!checkout) return;
+
+    if (checkout === 'success') {
+      showLocationStatus('Paiement confirmé ! Vérification de votre accès Premium en cours…', 'success');
+      authService.init().then(() => {
+        if (authService.isPremium()) {
+          showLocationStatus('Félicitations ! Votre abonnement Atmos Premium est actif ✦', 'success');
+        } else {
+          setTimeout(() => {
+            authService.init().then(() => {
+              if (authService.isPremium()) {
+                showLocationStatus('Félicitations ! Votre abonnement Atmos Premium est actif ✦', 'success');
+              }
+            });
+          }, 2500);
+        }
+      });
+    } else if (checkout === 'cancelled') {
+      showLocationStatus('Paiement annulé. Aucun débit n’a été effectué.');
+    }
+
+    url.searchParams.delete('checkout');
+    url.searchParams.delete('session_id');
+    const cleanPath = url.pathname + (url.search ? url.search : '');
+    window.history.replaceState({}, document.title, cleanPath);
+  } catch {
+    // Ne pas bloquer l'application en cas d'erreur URL
+  }
+}
+
 function bootstrap() {
   setupTheme();
   setupDashboardTabs();
   setupAuth();
+  handleCheckoutFeedback();
   renderSurfCard(null, null);
   renderOutdoorCard(null);
   setupLocationControls();
